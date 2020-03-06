@@ -1,7 +1,17 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-df  = pd.read_csv("data.csv")
-df.plot()  # plots all columns against index
-df.plot(kind='scatter',x='x',y='y') # scatter plot
-df.plot(kind='density')  # estimate density function
-# df.plot(kind='hist')  # histogram
+
+
+# reading the % change data
+d  = pd.read_csv("test1_change_only.csv")
+JAPAN = d['JAPAN']
+HK = d['HK']
+
+# plotting 
+plt.scatter(JAPAN, HK, color='r')
+plt.xlabel('JAPAN')
+plt.ylabel('HK')
+plt.savefig("Japan VS HK")
+plt.show()
+
+# calculate eigenvalue
