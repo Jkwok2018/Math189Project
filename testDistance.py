@@ -4,44 +4,63 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns; sns.set()
 import math as math
+import torch
 
 # read in the data, X will be in the form [[x1,y1],[..],...]
 d  = pd.read_csv("test1_change_only.csv")
 JAPAN = d['JAPAN']
 HK = d['HK']
+SHANGHAI = d['SHANGHAI']
 dataframe = d.loc[:, ['JAPAN', 'HK']]
+dataframe2 = d.loc[:, ['JAPAN', 'SHANGHAI']]
 X = np.array(dataframe.to_numpy())
+X2 = np.array(dataframe2.to_numpy())
 
-# Perform PCA
+# Perform PCA on JAPAN vs HK
 pca = PCA()
 pca.fit(X)
-# Covariance matrix
-# [[0.67028827 0.08640905]
-# [0.08640905 1.6896526 ]]
-
+# Eigenvectors
 y = pca.components_[0][1]
 x = pca.components_[0][0]
-evals = pca.explained_variance_
-# [1.6969254  0.66301547]
-
-# Draw the eignevectors
-def draw_vector(v0, v1, ax=None):
-    ax = ax or plt.gca()
-    arrowprops=dict(arrowstyle='->',
-                    color='b',
-                    linewidth=2,
-                    shrinkA=0, shrinkB=0)
-    ax.annotate('', v1, v0, arrowprops=arrowprops)
-
-# plot data
-plt.scatter(X[:, 0], X[:, 1], alpha=0.2)
-for length, vector in zip(pca.explained_variance_, pca.components_):
-    v = vector * 3 * np.sqrt(length)
-    draw_vector(pca.mean_, pca.mean_ + v)
-plt.axis('equal')
-plt.margins(1,1)
-plt.scatter(JAPAN, HK, color='r')
-plt.show()
-
 #  Calculate theta in degrees
 theta = math.atan(y/x)*180/(math.pi)
+# Eigenvalues
+evals = pca.explained_variance_
+print(evals)
+# [2.58450984 2.11708665]
+
+
+# Perform PCA on JAPAN vs SHANGHAI
+pca2 = PCA()
+pca2.fit(X2)
+# Eigenvectors
+y2 = pca2.components_[0][1]
+x2 = pca2.components_[0][0]
+#  Calculate theta in degrees
+theta2 = math.atan(y2/x2)*180/(math.pi)
+# Eigenvalues
+evals2 = pca2.explained_variance_
+print(evals2)
+# [6.71260216 2.4525767 ]
+
+def distance(M):
+    m = M.item()
+    n = 1-x
+    lambda1 = torch.tensor([x,y])
+    lambda2 = torch.tensor([x2,y2])
+    output = torch.tensor(m * (lambda1 - lambda2) + n * (theta - theta2))
+    return output
+
+# Calculate the mimunum of the rosenbrock function
+M = torch.tensor(0.5, requires_grad=True)
+alpha = 0.01
+for i in range(5000):
+    z = distance(M)
+    z.backward()
+    m = m - alpha * m.grad
+    m = torch.tensor(m, requires_grad=True)
+    print('i=',i,', m=', n, 'value=',z)
+
+
+distance_min = z.item()
+print('The minimum of the distance function is ', distance_min)
