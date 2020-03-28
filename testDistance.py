@@ -68,7 +68,9 @@ def distance(x,y,x2,y2,theta,theta2):
     n = 0.5
     lambda1 = torch.tensor([x,y])
     lambda2 = torch.tensor([x2,y2])
-    output = torch.tensor(m * (lambda1 - lambda2) + n * (theta - theta2))
+    #output = torch.tensor(m * (lambda1 - lambda2) + n * (theta - theta2))
+    #output = h1 * #put the norm for vectors (c1-c2) * m1* math.abs(lambda11-lambda21) + m2 * math.abs(Lambda12 - lambda22) + n * (theta-theta2) 
+    # output = m1* (math.abs(lambda11-lambda21))^2 + m2 * math.abs(Lambda12 - lambda22) # also can use squared
     return output
 
 # # Calculate the mimunum of the rosenbrock function
