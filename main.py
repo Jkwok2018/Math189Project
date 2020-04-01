@@ -2,46 +2,82 @@ from sklearn.decomposition import PCA
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns; sns.set()
 import math as math
-import torch
 from statistics import mean
+import cluster as cluster
 
-def main()
+
+def main():
     # read in the data, X will be in the form [[x1,y1],[..],...]
-    d  = pd.read_csv("test1_change_only.csv")
-    PercentChange = d['PercentChange']
-    Volumn = d['Volume']
-    dataframe = d.loc[:, ['PercentChange', 'Volumn']]
+    d  = pd.read_csv("newProcessed.csv")
+    # PercentChange = d['PriceChange']
+    # Volume = d['VolumeChange']
+
+    # PercentChange = [1,2,3, 4]
+    # Volume = [-1, -2, -3, 4]
+    # dataframe = pd.DataFrame(list(zip(PercentChange,Volume)),
+    #                 columns = ['PriceChange', 'VolumeChange'])
+    dataframe = d.loc[:, ['PriceChange', 'VolumeChange']]
     X = np.array(dataframe.to_numpy())
-    
+
+    print("HI")
     pca = PCA()
+    data = []
     # Perform PCA on every 30 data points
     i = 0
+    
     while (i<len(X)):
         oneMonth = X[i:i+30]
+        returnList=[]
+
+        # Append mean of price and volume
+        returnList.append(mean(oneMonth[:, 0]))
+        returnList.append(mean(oneMonth[:, 1]))
+        
+        # PCA
         pca.fit(oneMonth)
-        # Eigenvectors
-        v = pca.components_[0]
-        #  Calculate theta in degrees
-        theta = math.atan(v[1]/v[2])*180/(math.pi)
-        # Eigenvalues in the form [lambda1, lambda2]
+       
+        # Append the two eigenvalues, the bigger eigenvalues go first
+        # and hold more weight
         evals = pca.explained_variance_
-        #TODO: Format the 4 values into one array and append them into a matrix
+        returnList.append(evals[0])
+        returnList.append(evals[1])
+
+        y = pca.components_[0][1]
+        x = pca.components_[0][0]
+        theta = math.atan(y/x)*180/(math.pi)
+        returnList.append(theta)
         i = i+30
+        data.append(returnList)
+    
+    print("\nBegin k-means clustering demo \n")
+    np.set_printoptions(precision=4, suppress=True)
+    np.random.seed(2)
+    
+    raw_data =  np.asarray(data, dtype=np.float32)
+    print(data[:10])
+
+    (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
+ 
+    k = 3
+    print("\nClustering normalized data with k=" + str(k))
+    clustering = cluster.cluster(norm_data, k)
+
+    print("\nDone. Clustering:")
+    print(clustering)
+
+    print("\nRaw data grouped by cluster: ")
+    cluster.display(raw_data, clustering, k)
+
+    print("\nEnd k-means demo ")
 
 
-def distance(x,y,x2,y2,theta,theta2):
-    # TODO: write a function that determines the best m and n
-    # TODO: need to update the distance function
-    m = 0.5
-    n = 0.5
-    lambda1 = torch.tensor([x,y])
-    lambda2 = torch.tensor([x2,y2])
-    #output = torch.tensor(m * (lambda1 - lambda2) + n * (theta - theta2))
-    #output = h1 * #put the norm for vectors (c1-c2) * m1* math.abs(lambda11-lambda21) + m2 * math.abs(Lambda12 - lambda22) + n * (theta-theta2) 
-    # output = m1* (math.abs(lambda11-lambda21))^2 + m2 * math.abs(Lambda12 - lambda22) # also can use squared
-    return output
+        
+    
+       
+if __name__ == "__main__":
+    main()
+
 
 #TODO: k-mean clustering
 #TODO: write a function that tests what k would yield the sum of the smallest distances 
