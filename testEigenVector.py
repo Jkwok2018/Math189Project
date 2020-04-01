@@ -2,7 +2,7 @@ from sklearn.decomposition import PCA
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns; sns.set()
+# import seaborn as sns; sns.set()
 import math as math
 
 # read in the data, X will be in the form [[x1,y1],[..],...]
@@ -40,7 +40,7 @@ for length, vector in zip(pca.explained_variance_, pca.components_):
     draw_vector(pca.mean_, pca.mean_ + v)
 plt.axis('equal')
 plt.margins(1,1)
-plt.scatter(JAPAN, HK, color='r')
+# plt.scatter(JAPAN, HK, color='r')
 plt.show()
 
 #  Calculate theta in degrees

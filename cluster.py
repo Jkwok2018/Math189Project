@@ -3,6 +3,7 @@
 # Anaconda 4.1.1
 
 import numpy as np
+import math as math
 
 def mm_normalize(data):
   # min-max
@@ -21,11 +22,31 @@ def mm_normalize(data):
 
 def distance(item, mean):
   # Euclidean distance from a data item to a mean
-  sum = 0.0
-  dim = len(item)
-  for j in range(dim):
-    sum += (item[j] - mean[j]) ** 2
-  return np.sqrt(sum)
+#   sum = 0.0
+#   dim = len(item)
+#   for j in range(dim):
+#     sum += (item[j] - mean[j]) ** 2
+#   return np.sqrt(sum)
+
+    h1 = 0.5       # Weight for center
+    m1 = 0.3    # Weight for Prinipal Eigenvector
+    m2 = 0.1      # Weight for the smaller eigenvector
+    n = 0.1      # Weight of theta
+   
+    center1 = item[0:2]
+    center2 = mean[0:2]
+    evalue1 = item[2:4]
+    evalue2 = mean[2:4]
+    theta1 = item[-1]
+    theta2 = mean[-1]
+  
+    center_dis = np.linalg.norm(center2-center1)
+    evalue_dis = abs(evalue2[0]-evalue1[0])
+    evalue_dis2 = abs(evalue2[1]-evalue1[1])
+    theta_dis = abs(theta2-theta1)
+    
+    return h1*center_dis + m1*evalue_dis + m2*evalue_dis2 + n*theta_dis
+
 
 def update_clustering(norm_data, clustering, means):
   # given a (new) set of means, assign new clustering
