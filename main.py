@@ -74,14 +74,12 @@ def main():
     (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
     print(norm_data[:5])
     
-   
     for i in range(5):
         print('raw')
         print("%4d " % i, end=""); print(raw_data[i])
         print('norm')  
         print("%4d " % i, end=""); print(norm_data[i])  
         
-    
     k = 3
     print("\nClustering normalized data with k=" + str(k))
     clustering = cluster.cluster(norm_data, k)
