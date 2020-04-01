@@ -6,6 +6,7 @@ import seaborn as sns; sns.set()
 import math as math
 import torch
 from statistics import mean
+from numpy.linalg import norm
 
 # read in the data, X will be in the form [[x1,y1],[..],...]
 d  = pd.read_csv("test1_change_only.csv")
@@ -61,28 +62,38 @@ evals2 = pca2.explained_variance_
 print(evals2)
 # [6.71260216 2.4525767 ]
 
-def distance(x,y,x2,y2,theta,theta2):
-    # m = M[0].item()
-    # n = 1-x
-    m = 0.5
-    n = 0.5
-    lambda1 = torch.tensor([x,y])
-    lambda2 = torch.tensor([x2,y2])
-    #output = torch.tensor(m * (lambda1 - lambda2) + n * (theta - theta2))
+def distance(p1, p2):
+    """
+    p1 and p2 each have 5 elements
+    #1. mean of the price
+    #2. mean of the volume
+    #3. principal eigen value
+    #4. the other eigenvalue
+    $5 theta
+    """
+   
+    h1 = 0.5       # Weight for center
+    m1 = 0.3    # Weight for Prinipal Eigenvector
+    m2 = 0.1      # Weight for the smaller eigenvector
+    n = 0.1      # Weight of theta
+   
+    center1 = p1[0:2]
+    center2 = p2[0:2]
+    evalue1 = p1[2:4]
+    evalue2 = p2[2:4]
+    theta1 = p1[-1]
+    theta2 = p2[-1]
+  
+    center_dis = numpy.linalg.norm(center2-center1)
+    evalue_dis = math.abs(evalue2[0]-evalue1[0])
+    evalue_dis2 = math.abs(evalue2[1]-evalue1[1])
+    theta_dis = math.abs(theta2-theta1)
+    
+    return h1*center_dis + m1*evalue_dis + m2*evalue_dis2 + n*theta_dis
+
+
+
+
+     #output = torch.tensor(m * (lambda1 - lambda2) + n * (theta - theta2))
     #output = h1 * #put the norm for vectors (c1-c2) * m1* math.abs(lambda11-lambda21) + m2 * math.abs(Lambda12 - lambda22) + n * (theta-theta2) 
     # output = m1* (math.abs(lambda11-lambda21))^2 + m2 * math.abs(Lambda12 - lambda22) # also can use squared
-    return output
-
-# # Calculate the mimunum of the rosenbrock function
-# M = torch.tensor([0.5], requires_grad=True)
-# alpha = 0.01
-# for i in range(5000):
-#     z = distance(M)
-#     z.backward()
-#     m = m - alpha * m.grad
-#     m = torch.tensor(m, requires_grad=True)
-#     print('i=',i,', m=', n, 'value=',z)
-
-
-# distance_min = z.item()
-# print('The minimum of the distance function is ', distance_min)
