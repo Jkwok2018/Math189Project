@@ -1,13 +1,19 @@
-# k_means.py
-# k-means clustering demo
-# Anaconda 4.1.1
+# cluster.py
+# Used for performing k-means clustering with custom distance function
+# Imported to main.py
 
 import numpy as np
 import math as math
 
 def mm_normalize(data):
-  # min-max
-  (rows, cols) = data.shape  # (20,4) for demo
+  """
+  normalize all values by doing (x-min)/ (max - min) to get all values
+  between 0 and 1
+  input: a numpy array of raw data
+  output: a list containing the normalized version of numpy's array of raw data,
+  and lists of mins and max
+  """
+  (rows, cols) = data.shape  
   mins = np.zeros(shape=(cols), dtype=np.float32)
   maxs = np.zeros(shape=(cols), dtype=np.float32)
   for j in range(cols):
@@ -21,49 +27,53 @@ def mm_normalize(data):
   return (result, mins, maxs)
 
 def distance(item, mean):
-  # Euclidean distance from a data item to a mean
-#   sum = 0.0
-#   dim = len(item)
-#   for j in range(dim):
-#     sum += (item[j] - mean[j]) ** 2
-#   return np.sqrt(sum)
-
-    h1 = 0.5       # Weight for center
-    m1 = 0.3    # Weight for Prinipal Eigenvector
-    m2 = 0.1      # Weight for the smaller eigenvector
-    n = 0.1      # Weight of theta
-   
-    center1 = item[0:2]
-    center2 = mean[0:2]
-    evalue1 = item[2:4]
-    evalue2 = mean[2:4]
-    theta1 = item[-1]
-    theta2 = mean[-1]
+  """
+  item: a list of 5 items: coordinates of center, the principal and
+  secondary eigenvalue and theta
+  mean: a vector containing these 5 components to all of our data
+  """
+  CenterW = 0.1       # Weight for center
+  PrincipalW = 0.635    # Weight for Prinipal Eigenvalue
+  MinorW = 0.015        # Weight for the smaller Eigenvalue
+  AngleW = 0.0005        # Weight of theta
   
-    center_dis = np.linalg.norm(center2-center1)
-    evalue_dis = abs(evalue2[0]-evalue1[0])
-    evalue_dis2 = abs(evalue2[1]-evalue1[1])
-    theta_dis = abs(theta2-theta1)
-    
-    return h1*center_dis + m1*evalue_dis + m2*evalue_dis2 + n*theta_dis
+  # Putting the coordinates of center into an list
+  center1 = item[0:2]
+  center2 = mean[0:2]
+
+  # Putting the coordinates of eigenvalues into an list
+  evalue1 = item[2:4]
+  evalue2 = mean[2:4]
+
+  theta1 = item[-1]
+  theta2 = mean[-1]
+
+  center_dis = np.linalg.norm(center2 - center1)
+  evalue_dis = abs(evalue2[0]-evalue1[0])
+  evalue_dis2 = abs(evalue2[1]-evalue1[1])
+  theta_dis = abs(theta2-theta1)
+  
+  return CenterW * center_dis + PrincipalW * evalue_dis + MinorW * evalue_dis2 + AngleW * theta_dis
 
 
 def update_clustering(norm_data, clustering, means):
-  # given a (new) set of means, assign new clustering
-  # return False if no change or bad clustering
+  """
+  given a new set of means, assign new clustering
+  return False if no change or bad clustering
+  """
   n = len(norm_data)
   k = len(means)
 
   new_clustering = np.copy(clustering)  # proposed new clustering
   distances = np.zeros(shape=(k), dtype=np.float32)  # from item to each mean
 
-  for i in range(n):  # walk thru each data item
+  for i in range(n):  # go thru each data item
     for kk in range(k):
       distances[kk] = distance(norm_data[i], means[kk])  
     new_id = np.argmin(distances)
     new_clustering[i] = new_id
   
-  if np.array_equal(clustering, new_clustering):  # no change so done
+  if np.array_equal(clustering, new_clustering):  # no change, then clustering is complete
     return False
 
   # make sure that no cluster counts have gone to zero
@@ -72,19 +82,21 @@ def update_clustering(norm_data, clustering, means):
     c_id = clustering[i]
     counts[c_id] += 1
   
-  for kk in range(k):  # could use np.count_nonzero
-    if counts[kk] == 0:  # bad clustering
+  for kk in range(k): 
+    if counts[kk] == 0:  # bad clustering if cluster counts gone to 0
       return False
 
   # there was a change, and no counts have gone 0
   for i in range(n):
-   clustering[i] = new_clustering[i]  # update by ref
+   clustering[i] = new_clustering[i]  # update the label for cluster
   return True
 
 def update_means(norm_data, clustering, means):
-  # given a (new) clustering, compute new means
-  # assumes update_clustering has just been called
-  # to guarantee no 0-count clusters
+  '''
+  given a new clustering, compute new means
+  assumes update_clustering has just been called
+  to guarantee no 0-count clusters
+  '''
   (n, dim) = norm_data.shape
   k = len(means)
   counts = np.zeros(shape=(k), dtype=np.int)
@@ -116,6 +128,10 @@ def initialize(norm_data, k):
   return(clustering, means) 
   
 def cluster(norm_data, k):
+  '''
+  Perform k-means clustering by calling update_clustering and
+  update_means
+  '''
   (clustering, means) = initialize(norm_data, k)
 
   ok = True  # if a change was made and no bad clustering
@@ -131,41 +147,21 @@ def cluster(norm_data, k):
   return clustering
 
 def display(raw_data, clustering, k):
+  """
+  display all input data according to their cluster, 
+  prints out label of the cluster
+  """
   (n, dim) = raw_data.shape
-  print("-------------------")
+  # print("-------------------")
+  clusters = []
   for kk in range(k):  # group by cluster ID
+    kth_cluster = []
     for i in range(n):  # scan the raw data
       c_id = clustering[i]  # cluster ID of curr item
       if c_id == kk:  # curr item belongs to curr cluster so . . 
-        print("%4d " % i, end=""); print(raw_data[i])
-    print("-------------------")  
+        kth_cluster.append(raw_data[i])
+        # print("%4d " % i, end=""); print(raw_data[i])
+    # print("-------------------")  
+    clusters.append(kth_cluster)
+  return clusters
 
-def main():
-  print("\nBegin k-means clustering demo \n")
-  np.set_printoptions(precision=4, suppress=True)
-  np.random.seed(2)
-
-  raw_data = np.loadtxt(".\\ht_wt_gpa_inc.txt", dtype=np.float32,
-    delimiter=",", skiprows=0, usecols=[0,1,2,3])
-  (n, dim) = raw_data.shape
-
-  print("Raw data:")
-  for i in range(n):
-    print("%4d " % i, end=""); print(raw_data[i])  
-
-  (norm_data, mins, maxs) = mm_normalize(raw_data)
- 
-  k = 3
-  print("\nClustering normalized data with k=" + str(k))
-  clustering = cluster(norm_data, k)
-
-  print("\nDone. Clustering:")
-  print(clustering)
-
-  print("\nRaw data grouped by cluster: ")
-  display(raw_data, clustering, k)
-
-  print("\nEnd k-means demo ")
-
-if __name__ == "__main__":
-  main()
