@@ -2,8 +2,8 @@
 import numpy as np
 import pandas as pd
 
-sampleDate = pd.read_csv("SampleDate.csv")
-sp500  = pd.read_csv("S&PUpdated.csv") #Excel File
+sampleDate = pd.read_csv("sampleDate.csv")
+sp500  = pd.read_csv("SandPMarch31.csv") #Excel File
 
 spDate = sp500['Date'].tolist()
 spPriceChange = sp500['PriceChange'].tolist()
@@ -24,8 +24,7 @@ for i in range(len(standardDate)):
     export.append(new)    
 
 df = pd.DataFrame(export, columns=['Date', 'Price Change', 'Volume Change'])    
-df.to_excel(r'newProcessed.xlsx', index = False, header = True)
-
+df.to_csv(r'newProcessed.csv', index = False, header = True)
 '''
 jpn = pd.read_csv("Japan.csv")
 hk = pd.read_csv("HSI.csv")
