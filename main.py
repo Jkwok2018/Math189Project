@@ -1,31 +1,38 @@
+# main.py
+# Perform k-means clustering and Markov Model
+
 from sklearn.decomposition import PCA
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import math as math
 import random
-# import seaborn as sns; sns.set()
 from statistics import mean
-import cluster as cluster
+import cluster2 as cluster
 from matplotlib.patches import Ellipse
 
+###### FUNCTIONS #########
+
+""" Visualizing Data"""
+
 def draw_vector(v0, v1, ax=None):
+    ''' draws eigen vectors
+    '''
     ax = ax or plt.gca()
     arrowprops=dict(arrowstyle='->', color='b', linewidth=2,
                     shrinkA=0, shrinkB=0)
     ax.annotate('', v1, v0, arrowprops=arrowprops)
 
 def draw_ellipse(data, cluster):
+    '''Plot all of the eclipses, and plot each cluster in different color
+    '''
     plt.figure()
     ax = plt.gca()
-    
     for i in range(len(data)):
         if cluster[i] == 0:
             color='r' 
-            # print("r")
         elif cluster[i] == 1:
             color='g'
-            # print("g")
         elif cluster[i] == 2:
             color = 'c'
         elif cluster[i] == 3:
@@ -42,22 +49,14 @@ def draw_ellipse(data, cluster):
         ax.add_patch(ellipse)
 
         # Uncomment if want to see the scales on both axis are the same
-
+        #
         # plt.xlim(-6000,6000)
         # plt.ylim(-6000,6000)
         plt.margins(1,1)
     plt.show()
 
-# def draw_single_ellipse(X, L):
-#     plt.figure()
-#     ax = plt.gca()
 
-#     ellipse = Ellipse(xy=(L[0], L[1]), width=L[3], height=L[2],angle=L[4], 
-#                             edgecolor='r', fc='None', lw=2)
-#     ax.add_patch(ellipse)
-#     plt.scatter(X[:30, 0], X[:30, 1], color='r')
-#     plt.margins(1,1)
-#     plt.show()
+""" Functions used for determining the value of k """
 
 def cluster_distance(clusters):
     """ Sum the average distance in each cluster, and then take the average
@@ -74,14 +73,9 @@ def cluster_distance(clusters):
     for i in range(len(clusters)):
         c = clusters[i]
         mean = np.mean(c, axis=0)
-        # r = random.sample(range(len(c)), 10)
-        # for j in range(len(r)):
-        #     total += cluster.distance(c[r[j]], mean)
-        # clusters_avg += total*1.0/len(r)
         for j in range(len(c)):
             total += cluster.distance(c[j], mean)
         clusters_avg += total*1.0/len(c)
-    print(float(clusters_avg/len(clusters)))
     return float(clusters_avg/len(clusters))
 
 def threshold_plot(L):
@@ -95,9 +89,10 @@ def threshold_plot(L):
     plt.scatter(k, distances)
     plt.xlabel('k')
     plt.ylabel('distance')
-    # plt.plot(k, distances)
     plt.show()
 
+
+""" Training and Testing the Mark Model"""
 
 def get_cluster_dict(L):
     """ 
@@ -113,7 +108,6 @@ def get_cluster_dict(L):
         old_value = items.get(four_label)
         index = L[i + 4]
         old_value[index] += 1
-        # items[four_label] = old_value
         items.update({four_label: old_value})
             
     for key in items:
@@ -124,6 +118,11 @@ def get_cluster_dict(L):
     return items
 
 def test_markov(dict, testL):
+    '''
+    input: dictionary generated from running get_cluster_dict, and testL is the test set
+    output: the accuracy of prediction and the number of cases in which the testing set's
+    shift window was not found in the training set. 
+    '''
     not_found = 0
     failed_cases = 0
     for i in range(len(testL)-5):
@@ -134,6 +133,8 @@ def test_markov(dict, testL):
             failed_cases += 1
     correctness = 1-((failed_cases + not_found)* 1.0 /(len(testL)))
     return correctness, not_found
+
+###### MAIN ########
 
 def main():
     # read in preprocessed values
@@ -192,22 +193,26 @@ def main():
     raw_data =  np.asarray(data, dtype=np.float32)
     # normalize the raw data so that they are all in the range of (0,1)
     (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
-    # # define the number of clusters 
+    # define the number of clusters 
     k = 7
 
-    # # # perform clustering
+    # perform clustering
     print("\nClustering normalized data with k=" + str(k))
     clustering = cluster.cluster(norm_data, k)
     
-    # # print results
+    # print results
     print("\nDone. Clustering:")
     print(clustering)
     print("\nRaw data grouped by cluster: ")
     clusters = cluster.display(norm_data, clustering, k)
-    # draw_ellipse(data, clustering)
-    print("\nEnd k-means demo ")
 
+    # Uncomment in order to visualize the result by plotting all elicpses on the same plot
+    #
+    # draw_ellipse(data, clustering)
+
+    ### Uncoment if want to visualize the optimal k value, must comment out the block above
     # Find the optimal k value by calculating the average distance associated with each
+    #
     # distance_L = []
     # for  k in range(1, 8):
     #     print("k = "+ str(k))
@@ -217,12 +222,15 @@ def main():
     #     distance_L.append([k, distance])
     # threshold_plot(distance_L)
 
+    print("\nEnd k-means demo ")
+
+    # Split the eclipses in 9 Xtrain: 1 Xtest for the Markov Model
+
     splitPt = int(len(clustering) * 0.9)
     Xtrain = clustering[0:splitPt]
     Xtest = clustering[splitPt:]
-
-    # print(Xtrain)
     
+    # Training and Testing Markov Model
     dictionary = get_cluster_dict(Xtrain)
     correctness, not_found = test_markov(dictionary, Xtest)
     print("Accuracy is " + str(correctness*100) + "%")
