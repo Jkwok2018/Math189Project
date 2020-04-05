@@ -32,11 +32,14 @@ def distance(item, mean):
   secondary eigenvalue and theta
   mean: a vector containing these 5 components to all of our data
   """
-  CenterW = 0.1       # Weight for center
-  PrincipalW = 0.635    # Weight for Prinipal Eigenvalue
-  MinorW = 0.015        # Weight for the smaller Eigenvalue
-  AngleW = 0.0005        # Weight of theta
-  
+  # Weight for center
+  CenterW = 0.2  
+  # Weight for Prinipal Eigenvalue     
+  PrincipalW = 0.78   
+  # Weight for the smaller Eigenvalue 
+  MinorW = 0.015
+  AngleW = 0.005    
+
   # Putting the coordinates of center into an list
   center1 = item[0:2]
   center2 = mean[0:2]
@@ -52,10 +55,7 @@ def distance(item, mean):
   evalue_dis = abs(evalue2[0]-evalue1[0])
   evalue_dis2 = abs(evalue2[1]-evalue1[1])
   theta_dis = abs(theta2-theta1)
-  
   return CenterW * center_dis + PrincipalW * evalue_dis + MinorW * evalue_dis2 + AngleW * theta_dis
-
-
 def update_clustering(norm_data, clustering, means):
   """
   given a new set of means, assign new clustering
@@ -160,8 +160,8 @@ def display(raw_data, clustering, k):
       c_id = clustering[i]  # cluster ID of curr item
       if c_id == kk:  # curr item belongs to curr cluster so . . 
         kth_cluster.append(raw_data[i])
-        # print("%4d " % i, end=""); print(raw_data[i])
-    # print("-------------------")  
+        print("%4d " % i, end=""); print(raw_data[i])
+    print("-------------------")  
     clusters.append(kth_cluster)
   return clusters
 

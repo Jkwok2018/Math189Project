@@ -26,15 +26,25 @@ def draw_ellipse(data, cluster):
         elif cluster[i] == 1:
             color='g'
             # print("g")
+        elif cluster[i] == 2:
+            color = 'c'
+        elif cluster[i] == 3:
+            color = 'y'
+        elif cluster[i] == 4:
+            color = 'k'
+        elif cluster[i] == 5:
+            color = 'm'
         else:
             color='b'
-            # print("b")
         L = data[i]
         ellipse = Ellipse(xy=(L[0], L[1]), width=2*L[2], height=2*L[3],angle=L[4], 
                                 edgecolor=color, fc='None', lw=2)
         ax.add_patch(ellipse)
-        # ax.set_xlim(-2, 2)
-        # ax.set_ylim(0, 5)
+
+        # Uncomment if want to see the scales on both axis are the same
+
+        # plt.xlim(-6000,6000)
+        # plt.ylim(-6000,6000)
         plt.margins(1,1)
     plt.show()
 
@@ -71,9 +81,9 @@ def cluster_distance(clusters):
         for j in range(len(c)):
             total += cluster.distance(c[j], mean)
         clusters_avg += total*1.0/len(c)
+    print(float(clusters_avg/len(clusters)))
     return float(clusters_avg/len(clusters))
-    
-            
+
 def threshold_plot(L):
     """
     Using the output of random_distance, plot distance vs. k for lists of k values
@@ -83,9 +93,47 @@ def threshold_plot(L):
     k = [i[0] for i in L]
     distances = [i[1] for i in L]
     plt.scatter(k, distances)
+    plt.xlabel('k')
+    plt.ylabel('distance')
+    # plt.plot(k, distances)
     plt.show()
 
-    
+
+def get_cluster_dict(L):
+    """ 
+    input: a list of cluster labels in time series
+    output: an dictionary where the keys are chunks of 4 clusters 
+    and the values is [the most probable fifth cluster, probability of the most probable]
+    """
+    items = dict()
+    for i in range(len(L)-5):
+        four_label = ''.join(map(str, L[i:i+4] )) 
+        if four_label not in items:
+            items.update({four_label: [0,0,0,0,0,0,0]})
+        old_value = items.get(four_label)
+        index = L[i + 4]
+        old_value[index] += 1
+        # items[four_label] = old_value
+        items.update({four_label: old_value})
+            
+    for key in items:
+        max_cluster = np.argmax(items.get(key))
+        prob = max(items.get(key))/sum(items.get(key))
+        items[key] = [max_cluster, prob]
+
+    return items
+
+def test_markov(dict, testL):
+    not_found = 0
+    failed_cases = 0
+    for i in range(len(testL)-5):
+        four_label = ''.join(map(str, testL[i:i+4] )) 
+        if four_label not in dict:
+            not_found += 1
+        elif (dict[four_label][0] != testL[i+4]):
+            failed_cases += 1
+    correctness = 1-((failed_cases + not_found)* 1.0 /(len(testL)))
+    return correctness, not_found
 
 def main():
     # read in preprocessed values
@@ -144,31 +192,43 @@ def main():
     raw_data =  np.asarray(data, dtype=np.float32)
     # normalize the raw data so that they are all in the range of (0,1)
     (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
-    # print(norm_data[:5])
     # # define the number of clusters 
-    # k = 3
+    k = 7
 
-    # # perform clustering
-    # print("\nClustering normalized data with k=" + str(k))
-    # clustering = cluster.cluster(norm_data, k)
+    # # # perform clustering
+    print("\nClustering normalized data with k=" + str(k))
+    clustering = cluster.cluster(norm_data, k)
     
-    # print results
-    # print("\nDone. Clustering:")
-    # print(clustering)
-    # print("\nRaw data grouped by cluster: ")
-    # clusters = cluster.display(raw_data, clustering, k)
+    # # print results
+    print("\nDone. Clustering:")
+    print(clustering)
+    print("\nRaw data grouped by cluster: ")
+    clusters = cluster.display(norm_data, clustering, k)
     # draw_ellipse(data, clustering)
-    # print("\nEnd k-means demo ")
+    print("\nEnd k-means demo ")
 
     # Find the optimal k value by calculating the average distance associated with each
-    distance_L = []
-    for  k in range(1, 4):
-        print("k = "+ str(k))
-        clustering = cluster.cluster(norm_data, k)
-        clusters = cluster.display(norm_data, clustering, k)
-        distance = cluster_distance(clusters)
-        distance_L.append([k, distance])
-    threshold_plot(distance_L)
+    # distance_L = []
+    # for  k in range(1, 8):
+    #     print("k = "+ str(k))
+    #     clustering = cluster.cluster(norm_data, k)
+    #     clusters = cluster.display(norm_data, clustering, k)
+    #     distance = cluster_distance(clusters)
+    #     distance_L.append([k, distance])
+    # threshold_plot(distance_L)
+
+    splitPt = int(len(clustering) * 0.9)
+    Xtrain = clustering[0:splitPt]
+    Xtest = clustering[splitPt:]
+
+    # print(Xtrain)
+    
+    dictionary = get_cluster_dict(Xtrain)
+    correctness, not_found = test_markov(dictionary, Xtest)
+    print("Accuracy is " + str(correctness*100) + "%")
+    print("Cases not found: ", not_found)
+    
+    
 
 if __name__ == "__main__":
     main()
