@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 
+# Read in S&P 500 Data and Sample Date 
 sampleDate = pd.read_csv("sampleDate.csv")
 sp500  = pd.read_csv("SandPMarch31.csv") #Excel File
 
@@ -19,9 +20,11 @@ for i in range(len(standardDate)):
         new.append(spPriceChange[spDate.index(standardDate[i])])
         new.append(spVolumeChange[spDate.index(standardDate[i])])
     else:
+        # Default price and volume change to 0 if data not found
         new.append(0)
         new.append(0)
     export.append(new)    
 
-df = pd.DataFrame(export, columns=['Date', 'Price Change', 'Volume Change'])    
+# Export to csv, which will be used as input to k-means model in main.py
+df = pd.DataFrame(export, columns=['Date', 'PriceChange', 'VolumeChange'])    
 df.to_csv(r'newProcessed.csv', index = False, header = True)
