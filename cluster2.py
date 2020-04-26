@@ -128,6 +128,7 @@ def initialize(norm_data, k):
     update_means(norm_data, clustering, means)
     return(clustering, means) 
 
+@Memoize
 def cluster(norm_data, k):
     '''
     Perform k-means clustering by calling update_clustering and
