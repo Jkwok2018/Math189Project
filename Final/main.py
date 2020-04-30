@@ -9,7 +9,11 @@ import math as math
 import random
 from statistics import mean
 import cluster2 as cluster
+from sklearn import metrics
 from matplotlib.patches import Ellipse
+from scipy.optimize import minimize
+from optimization import opt_helper
+from scipy.optimize import NonlinearConstraint
 
 ###### FUNCTIONS #########
 
@@ -100,12 +104,12 @@ def cluster_mean(clusters):
         meanList.append(mean)
     return meanList
 
-def assign_clusters(meanList, dataToBeAssigned):
+def assign_clusters(weight, meanList, dataToBeAssigned):
     dataCluster = []
     for data in dataToBeAssigned:
         distanceList = []
         for clusterMean in meanList:
-            distanceList += [cluster.distance(data, clusterMean)]
+            distanceList += [cluster.distance(weight, data, clusterMean)]
         dataCluster += [np.argmin(distanceList)]
     return dataCluster
 
@@ -213,24 +217,46 @@ def main():
     print("\nBegin k-means clustering demo \n")
     np.set_printoptions(precision=4, suppress=True)
     np.random.seed(2)
-
+    
     # convert data to np.array
     raw_data =  np.asarray(data, dtype=np.float32)
+
+    def rosen(weight):
+        opt_helper(weight, raw_data)
+
+    weight0 = [0.2, 0.78, 0.015, 0.005]
+    print(weight0)
+    constraint = NonlinearConstraint(sum, 1, 1)
+    ans = minimize(rosen, weight0, method='trust-constr', 
+                    constraints=[constraint], options={'maxiter':3})
+    print(ans)
     # normalize the raw data so that they are all in the range of (0,1)
-    (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
-    # define the number of clusters 
-    k = 7
+    # (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
+    # # define the number of clusters 
+    # k = 7
 
-    # perform clustering
-    print("\nClustering normalized data with k=" + str(k))
-    clustering = cluster.cluster(norm_data, k)
+    # # perform clustering
+    # print("\nClustering normalized data with k=" + str(k))
+    # # weight: a list of 4 items that contained the weight of the center, the principal and the secondary eigenvalue, and theta
+    # weight = [0.2, 0.78, 0.015, 0.005]
+
+    # def distance(item1, item2):
+    #     return cluster.distance(weight,item1, item2)
+
+    # clustering = cluster.cluster(weight, norm_data, k)
     
-    # print results
-    print("\nDone. Clustering:")
-    print(clustering)
-    print("\nRaw data grouped by cluster: ")
-    clusters = cluster.display(norm_data, clustering, k)
+    # # print results
+    # # print("\nDone. Clustering:")
+    # # print(clustering)
+    # # print("\nRaw data grouped by cluster: ")
+    # clusters = cluster.display(norm_data, clustering, k)
 
+    # result = metrics.silhouette_score(norm_data, clustering, metric = distance, sample_size=50)
+    # result2 = metrics.silhouette_score(raw_data, clustering, metric = distance,sample_size=50)
+    # print("smthing score")
+    # print(result)
+    # print("Secod score")
+    # print(result2)
     # Uncomment in order to visualize the result by plotting all elicpses on the same plot
     #
     # draw_ellipse(data, clustering)
@@ -249,6 +275,7 @@ def main():
 
     print("\nEnd k-means demo ")
 
+"""
     # Split the eclipses in 9 Xtrain: 1 Xtest for the Markov Model
     Xtrain = clustering
 
@@ -265,14 +292,7 @@ def main():
     (norm_testdata, mins, maxs) = cluster.mm_normalize(raw_testdata)
     testDataClustering = assign_clusters(meanCluster,norm_testdata)
 
-    print("MEANCLUSTERING")
-    print(meanCluster)
-    print("NORMTESTDATA")
-    print(norm_testdata)
-
     Xtest = testDataClustering
-    print(testDataClustering)
-
     
     # Training and Testing Markov Model
     dictionary = get_cluster_dict(Xtrain)
@@ -280,8 +300,9 @@ def main():
     print("Accuracy is " + str(correctness*100) + "%")
     print("Cases not found: ", not_found)
     
-    
+    metrics.silhouette_score(norm_data, clustering)
 
+"""
 if __name__ == "__main__":
     main()
 
