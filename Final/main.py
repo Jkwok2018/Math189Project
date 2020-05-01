@@ -222,14 +222,51 @@ def main():
     raw_data =  np.asarray(data, dtype=np.float32)
 
     def rosen(weight):
-        opt_helper(weight, raw_data)
+        return opt_helper(weight, raw_data)
 
-    weight0 = [0.2, 0.78, 0.015, 0.005]
-    print(weight0)
-    constraint = NonlinearConstraint(sum, 1, 1)
-    ans = minimize(rosen, weight0, method='trust-constr', 
-                    constraints=[constraint], options={'maxiter':3})
-    print(ans)
+    # weight0 = [0.2, 0.78, 0.015, 0.005]
+    # weight0 = [0.33, 0.33, 0.34]
+    # print(weight0)
+    # constr = {'type':'ineq',
+    #           'fun': lambda x:1-sum(x)
+    #         }
+    # bounds = tuple(((0,1) for x in weight0))
+
+    # constraint = NonlinearConstraint(sum, 1, 1)
+    # ans = minimize(rosen, weight0, method='Nelder-Mead', 
+    #              options={'maxiter':1})
+    # ans = minimize(rosen, weight0, method='SLSQP', 
+    #                  constraints=[constr],bounds=bounds,
+    #                 options={'maxiter':2})
+    # ans = minimize(rosen, weight0, method='COBYLA', 
+    #                  constraints=[constr],
+    #                 options={'tol':0.1,'maxfev':2})
+    
+    # # print(weight0)
+    # # constraint = NonlinearConstraint(sum, 1, 1)
+    # # ans = minimize(rosen, weight0, method='trust-constr', 
+    # #                 bounds=bounds,constraints=[constraint], options={'maxiter':3})
+    # # print(ans)
+
+
+    testing_weight = [[0, 0.5, 0.5, 0],
+                      [0.2, 0.78, 0.015, 0.005],
+                      [1, 0, 0, 0],
+                      [0, 1, 0 , 0],
+                      [0.1, 0.8, 0.1, 0],
+                      [0.15, 0.75, 0.1, 0],
+                      [0.2, 0.75, 0.05, 0],
+                      [0.15, 0.75, 0.05, 0.05],
+                      [0.3, 0.3, 0.3, 0.1],
+                      [0.2, 0.5, 0.2, 0.1],
+                      [0.2, 0.2, 0.6, 0],
+                      [0.13, 0.22, 0.65, 0]
+                      ]
+                      # highest: [0.2, 0.5, 0.2, 0.1]
+
+    for weight_ in testing_weight:
+        score = rosen(weight_)
+        print("weight, score:", weight_, score)
     # normalize the raw data so that they are all in the range of (0,1)
     # (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
     # # define the number of clusters 
