@@ -227,21 +227,21 @@ def main():
 
     # # weight0 = [0.2, 0.78, 0.015, 0.005]
     # weight0 = [0.05, 0.45, 0.45, 0.05]
-    weight0 = [0.1, 0.4, 0.4, 0.1]
+    weight0 = [0.08, 0.25, 0.2, 0.47]
     # print(weight0)
     
     constr = {'type':'eq',
               'fun': lambda x: 1-sum(x)}
-    # # bounds = tuple(((0,1) for x in weight0))
-    bounds = [(0, 0.1), (0.1,1), (0.1,1), (0, 0.1)]
+    bounds = tuple(((0,1) for x in weight0))
+    # bounds = [(0, 0.1), (0.1,1), (0.1,1), (0, 0.1)]
 
-    # # constraint = NonlinearConstraint(sum, 1, 1)
-    # Nelder-Mead, BFGS
-    ans = minimize(rosen, weight0, method='Nelder-Mead', 
-                 options={'maxiter':10})
-    # ans = minimize(rosen, weight0, method='SLSQP', 
-    #                  constraints=[constr],bounds=bounds,
-    #                 options={'maxiter':10,'ftol':0.001})
+    # # # constraint = NonlinearConstraint(sum, 1, 1)
+    # # Nelder-Mead, BFGS
+    # ans = minimize(rosen, weight0, method='Nelder-Mead', 
+    #              options={'maxiter':10})
+    ans = minimize(rosen, weight0, method='SLSQP', 
+                     constraints=[constr],bounds=bounds,
+                    options={'maxiter':10,'ftol':0.001})
     # ans = minimize(rosen, weight0, method='COBYLA', 
     #                  constraints=[constr],
     #                 options={'tol':0.1,'maxfev':2})
@@ -252,25 +252,38 @@ def main():
     # constraint = NonlinearConstraint(sum, 1, 1)
     # ans = minimize(rosen, weight0, method='trust-constr', 
     #                 bounds=bounds,constraints=[constraint], options={'maxiter':3})
-    print(ans)
+    # print(ans)
 
 
-    # testing_weight = [[0.3,0.3,0.2,0.2],
-    #                   [0.5, 0.1, 0.1, 0.3],
-    #                   [0.3, 0.2, 0.2, 0.3],
-    #                   [0.2, 0.2, 0.3 , 0.3],
-    #                   [0.1, 0.1, 0.1, 0.7],
-    #                   [0.2, 0.3, 0.3, 0.2],
-    #                   [0.1, 0.3, 0.3, 0.3],
-    #                   [0.1, 0.2, 0.2, 0.5]
-    #                   ]
+    # testing_weight = [[0.1, 0.1, 0.1, 0.7],
+    #                     [0.09, 0.1, 0.1, 0.71],
+    #                     [0.15, 0.1, 0.1, 0.65],
+    #                      [0.1, 0.2, 0.2, 0.5],
+    #                      [0.1, 0.25, 0.2, 0.45],
+    #                      [0.08, 0.25, 0.2, 0.47],
+    #                      [0.1, 0.23, 0.2, 0.47]
+    #                  ]  
+                    #     [[0.3,0.3,0.2,0.2],
+                    #   [0.5, 0.1, 0.1, 0.3],
+                    #   [0.3, 0.2, 0.2, 0.3],
+                    #   [0.2, 0.2, 0.3 , 0.3],
+                    #   [0.1, 0.1, 0.1, 0.7],
+                    #   [0.2, 0.3, 0.3, 0.2],
+                    #   [0.1, 0.3, 0.3, 0.3],
+                    #   [0.1, 0.2, 0.2, 0.5],
+                    #   [0.05, 0.45, 0.45, 0.05],
+                    #   [0.05, 0.50, 0.4, 0.05],
+                    #   [0.1, 0.4, 0.4, 0.1],
+                    #   [0.03, 0.47, 0.47, 0.3],
+                    #   [0.07, 0.5, 0.40, 0.03 ]
+                    #   ]
     # #                   # highest: [0.2, 0.5, 0.2, 0.1]
 
     # for weight_ in testing_weight:
     #     score = rosen(weight_)
     #     print("weight, score:", weight_, score)
-    # normalize the raw data so that they are all in the range of (0,1)
-    (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
+    #normalize the raw data so that they are all in the range of (0,1)
+    # (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
     # define the number of clusters 
     # k = 7
 
