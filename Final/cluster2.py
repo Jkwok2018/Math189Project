@@ -57,7 +57,7 @@ def distance(weight, item, mean):
     evalue_dis = abs(evalue2[0]-evalue1[0])
     evalue_dis2 = abs(evalue2[1]-evalue1[1])
     theta_dis = abs(theta2-theta1)
-    return CenterW * center_dis + PrincipalW * evalue_dis + MinorW * evalue_dis2 + AngleW * theta_dis
+    return CenterW * center_dis**2 + PrincipalW * evalue_dis**2 + MinorW * evalue_dis2**2 + AngleW * theta_dis**2
 
 def update_clustering(weight, norm_data, clustering, means):
     '''
@@ -165,8 +165,8 @@ def display(raw_data, clustering, k):
             c_id = clustering[i]  # cluster ID of curr item
             if c_id == kk:  # curr item belongs to curr cluster so . . 
                 kth_cluster.append(raw_data[i])
-                print("%4d " % i, end=""); print(raw_data[i])
-        print("-------------------")  
+                # print("%4d " % i, end=""); print(raw_data[i])
+        # print("-------------------")  
         clusters.append(kth_cluster)
     return clusters
 

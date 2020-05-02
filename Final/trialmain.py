@@ -62,7 +62,7 @@ def draw_ellipse(data, cluster):
 
 """ Functions used for determining the value of k """
 
-def cluster_distance(clusters):
+def cluster_distance(clusters,weight):
     """ Sum the average distance in each cluster, and then take the average
     Input: clusters is a array in an array, saving all the eclipses by its cluster
     [[ellipses in cluster 0]
@@ -78,8 +78,9 @@ def cluster_distance(clusters):
         c = clusters[i]
         mean = np.mean(c, axis=0)
         for j in range(len(c)):
-            total += cluster.distance(c[j], mean)
-        clusters_avg += total*1.0/len(c)
+            total += cluster.distance(weight,c[j], mean)
+        #clusters_avg += total*1.0/len(c)
+        clusters_avg += total*1.0
     return float(clusters_avg/len(clusters))
 
 def threshold_plot(L):
@@ -207,8 +208,8 @@ def sum30Day(dataframe):
 
 def main():
     # read in preprocessed values
-    d  = pd.read_csv("newProcessed.csv")
-    dataframe = d.loc[:, ['PriceChange', 'VolumeChange']]
+    d  = pd.read_csv("SandPMarch31.csv")
+    dataframe = d.loc[:, ['PriceChange', 'frac']]
     X = np.array(dataframe.to_numpy())
 
     """ summarize 30 day data and put into matrix"""
@@ -224,72 +225,69 @@ def main():
     def rosen(weight):
         return opt_helper(weight, raw_data)
 
-    # weight0 = [0.2, 0.78, 0.015, 0.005]
-    # weight0 = [0.33, 0.33, 0.34]
+    # # weight0 = [0.2, 0.78, 0.015, 0.005]
+    # weight0 = [0.05, 0.45, 0.45, 0.05]
+    weight0 = [0.1, 0.4, 0.4, 0.1]
     # print(weight0)
-    # constr = {'type':'ineq',
-    #           'fun': lambda x:1-sum(x)
-    #         }
-    # bounds = tuple(((0,1) for x in weight0))
+    
+    constr = {'type':'eq',
+              'fun': lambda x: 1-sum(x)}
+    # # bounds = tuple(((0,1) for x in weight0))
+    bounds = [(0, 0.1), (0.1,1), (0.1,1), (0, 0.1)]
 
-    # constraint = NonlinearConstraint(sum, 1, 1)
-    # ans = minimize(rosen, weight0, method='Nelder-Mead', 
-    #              options={'maxiter':1})
+    # # constraint = NonlinearConstraint(sum, 1, 1)
+    # Nelder-Mead, BFGS
+    ans = minimize(rosen, weight0, method='Nelder-Mead', 
+                 options={'maxiter':10})
     # ans = minimize(rosen, weight0, method='SLSQP', 
     #                  constraints=[constr],bounds=bounds,
-    #                 options={'maxiter':2})
+    #                 options={'maxiter':10,'ftol':0.001})
     # ans = minimize(rosen, weight0, method='COBYLA', 
     #                  constraints=[constr],
     #                 options={'tol':0.1,'maxfev':2})
     
+    # weight0 = [0.1, 0.1, 0.1, 0.7]
+    # bounds = tuple((0.1,1) for x in weight0)
     # # print(weight0)
-    # # constraint = NonlinearConstraint(sum, 1, 1)
-    # # ans = minimize(rosen, weight0, method='trust-constr', 
-    # #                 bounds=bounds,constraints=[constraint], options={'maxiter':3})
-    # # print(ans)
+    # constraint = NonlinearConstraint(sum, 1, 1)
+    # ans = minimize(rosen, weight0, method='trust-constr', 
+    #                 bounds=bounds,constraints=[constraint], options={'maxiter':3})
+    print(ans)
 
-    testing_weight = [[0, 0.5, 0.5, 0],
-                        [0.15, 0.75, 0.05,0.05],
-                        [0.155, 0.745, 0.05, 0.05],
-                        [0.14, 0.76, 0.05, 0.05],
-                        [0.14, 0.74, 0.15, 0.05]]
-    #                   [0.2, 0.78, 0.015, 0.005],
-    #                   [1, 0, 0, 0],
-    #                   [0, 1, 0 , 0],
-    #                   [0.1, 0.8, 0.1, 0],
-    #                   [0.15, 0.75, 0.1, 0],
-    #                   [0.2, 0.75, 0.05, 0],
-    #                   [0.15, 0.75, 0.05, 0.05],
-    #                   [0.3, 0.3, 0.3, 0.1],
-    #                   [0.2, 0.5, 0.2, 0.1],
-    #                   [0.2, 0.2, 0.6, 0],
-    #                   [0.13, 0.22, 0.65, 0]
-    #                   
 
-                      # highest: [0.2, 0.5, 0.2, 0.1]
+    # testing_weight = [[0.3,0.3,0.2,0.2],
+    #                   [0.5, 0.1, 0.1, 0.3],
+    #                   [0.3, 0.2, 0.2, 0.3],
+    #                   [0.2, 0.2, 0.3 , 0.3],
+    #                   [0.1, 0.1, 0.1, 0.7],
+    #                   [0.2, 0.3, 0.3, 0.2],
+    #                   [0.1, 0.3, 0.3, 0.3],
+    #                   [0.1, 0.2, 0.2, 0.5]
+    #                   ]
+    # #                   # highest: [0.2, 0.5, 0.2, 0.1]
 
-    for weight_ in testing_weight:
-        score = rosen(weight_)
-        print("weight, score:", weight_, score)
+    # for weight_ in testing_weight:
+    #     score = rosen(weight_)
+    #     print("weight, score:", weight_, score)
     # normalize the raw data so that they are all in the range of (0,1)
-    # (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
-    # # define the number of clusters 
+    (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
+    # define the number of clusters 
     # k = 7
 
-    # # perform clustering
+    # perform clustering
     # print("\nClustering normalized data with k=" + str(k))
-    # # weight: a list of 4 items that contained the weight of the center, the principal and the secondary eigenvalue, and theta
-    # weight = [0.2, 0.78, 0.015, 0.005]
+    # weight: a list of 4 items that contained the weight of the center, the principal and the secondary eigenvalue, and theta
+    # weight = [0.1, 0.2, 0.1, 0.7]
 
-    # def distance(item1, item2):
-    #     return cluster.distance(weight,item1, item2)
+    def distance(item1, item2):
+        return cluster.distance(weight0,item1, item2)
 
     # clustering = cluster.cluster(weight, norm_data, k)
     
     # # print results
-    # # print("\nDone. Clustering:")
-    # # print(clustering)
-    # # print("\nRaw data grouped by cluster: ")
+    # print("\nDone. Clustering:")
+    # print(clustering)
+    # print("\nRaw data grouped by cluster: ")
     # clusters = cluster.display(norm_data, clustering, k)
 
     # result = metrics.silhouette_score(norm_data, clustering, metric = distance, sample_size=50)
@@ -298,6 +296,7 @@ def main():
     # print(result)
     # print("Secod score")
     # print(result2)
+
     # Uncomment in order to visualize the result by plotting all elicpses on the same plot
     #
     # draw_ellipse(data, clustering)
@@ -305,13 +304,18 @@ def main():
     ### Uncoment if want to visualize the optimal k value, must comment out the block above
     # Find the optimal k value by calculating the average distance associated with each
     #
+    # weight = [0.05, 0.45, 0.45, 0.05]
+    # #weight = [0.10, 0.45, 0.40, 0.05]
     # distance_L = []
-    # for  k in range(1, 8):
+    # for  k in range(3, 9):
     #     print("k = "+ str(k))
-    #     clustering = cluster.cluster(norm_data, k)
+    #     clustering = cluster.cluster(weight,norm_data, k)
     #     clusters = cluster.display(norm_data, clustering, k)
-    #     distance = cluster_distance(clusters)
-    #     distance_L.append([k, distance])
+    #     distance0 = cluster_distance(clusters, weight)
+    #     distance_L.append([k, distance0])
+    #     result = metrics.silhouette_score(raw_data, clustering, 
+    #                 metric = distance, sample_size=500)
+    #     print(result)
     # threshold_plot(distance_L)
 
 
