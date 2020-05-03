@@ -9,11 +9,13 @@ import math as math
 import random
 from statistics import mean
 import cluster2 as cluster
+import rnn
 from sklearn import metrics
 from matplotlib.patches import Ellipse
 from scipy.optimize import minimize
 from optimization import opt_helper
 from scipy.optimize import NonlinearConstraint
+import tensorflow as tf
 
 ###### FUNCTIONS #########
 
@@ -221,8 +223,8 @@ def main():
     # convert data to np.array
     raw_data =  np.asarray(data, dtype=np.float32)
 
-    def rosen(weight):
-        return opt_helper(weight, raw_data)
+    # def rosen(weight):
+    #     return opt_helper(weight, raw_data)
 
     # weight0 = [0.2, 0.78, 0.015, 0.005]
     # weight0 = [0.33, 0.33, 0.34]
@@ -248,11 +250,11 @@ def main():
     # #                 bounds=bounds,constraints=[constraint], options={'maxiter':3})
     # # print(ans)
 
-    testing_weight = [[0, 0.5, 0.5, 0],
-                        [0.15, 0.75, 0.05,0.05],
-                        [0.155, 0.745, 0.05, 0.05],
-                        [0.14, 0.76, 0.05, 0.05],
-                        [0.14, 0.74, 0.15, 0.05]]
+    # testing_weight = [[0, 0.5, 0.5, 0],
+    #                     [0.15, 0.75, 0.05,0.05],
+    #                     [0.155, 0.745, 0.05, 0.05],
+    #                     [0.14, 0.76, 0.05, 0.05],
+    #                     [0.14, 0.74, 0.15, 0.05]]
     #                   [0.2, 0.78, 0.015, 0.005],
     #                   [1, 0, 0, 0],
     #                   [0, 1, 0 , 0],
@@ -268,29 +270,29 @@ def main():
 
                       # highest: [0.2, 0.5, 0.2, 0.1]
 
-    for weight_ in testing_weight:
-        score = rosen(weight_)
-        print("weight, score:", weight_, score)
+    # for weight_ in testing_weight:
+    #     score = rosen(weight_)
+    #     print("weight, score:", weight_, score)
     # normalize the raw data so that they are all in the range of (0,1)
-    # (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
+    (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
     # # define the number of clusters 
-    # k = 7
+    k = 7
 
-    # # perform clustering
-    # print("\nClustering normalized data with k=" + str(k))
+    # perform clustering
+    print("\nClustering normalized data with k=" + str(k))
     # # weight: a list of 4 items that contained the weight of the center, the principal and the secondary eigenvalue, and theta
-    # weight = [0.2, 0.78, 0.015, 0.005]
+    weight = [0.2, 0.78, 0.015, 0.005]
 
     # def distance(item1, item2):
     #     return cluster.distance(weight,item1, item2)
 
-    # clustering = cluster.cluster(weight, norm_data, k)
+    clustering = cluster.cluster(weight, norm_data, k)
     
-    # # print results
-    # # print("\nDone. Clustering:")
-    # # print(clustering)
-    # # print("\nRaw data grouped by cluster: ")
-    # clusters = cluster.display(norm_data, clustering, k)
+    # print results
+    print("\nDone. Clustering:")
+    print(clustering)
+    print("\nRaw data grouped by cluster: ")
+    clusters = cluster.display(norm_data, clustering, k)
 
     # result = metrics.silhouette_score(norm_data, clustering, metric = distance, sample_size=50)
     # result2 = metrics.silhouette_score(raw_data, clustering, metric = distance,sample_size=50)
@@ -316,6 +318,32 @@ def main():
 
 
     print("\nEnd k-means demo ")
+
+    # Prediction
+    # rnn.rnn(clustering, seq_length, k)
+    checkpoint_dir = './training_checkpoints'
+    # Restore the latest checkpoint
+    tf.train.latest_checkpoint(checkpoint_dir)
+    
+    accuracy_L = []
+    for seq_length in range(8,11):
+        embedding_dim = 256
+        rnn_units = 1024
+        model = rnn.build_model(k, embedding_dim, rnn_units, batch_size=1)
+        model.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
+        model.build(tf.TensorShape([1, None]))
+
+        predictions_L = rnn.predict(model, clustering)
+        actual_L = clustering[4:]
+        accuracy = rnn.accuracy(predictions_L, actual_L)
+        accuracy_L.append(accuracy)
+        print("accuracy of seq_length ", seq_length, " is ", str(accuracy))
+    print(accuracy_L)
+    
+    # prediction = rnn.predict(model, [0, 0, 1, 1])
+    # print("prediction: ", prediction)
+    # seq_length = 4, accuracy 0.8086890243902439
+    # [0.14, 0.74, 0.15, 0.05]
 
 """
     # Split the eclipses in 9 Xtrain: 1 Xtest for the Markov Model

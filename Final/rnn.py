@@ -4,43 +4,16 @@ import os
 import time
 
 
-# # Read the data
-# path_to_file = tf.keras.utils.get_file('shakespeare.txt', 'https://storage.googleapis.com/download.tensorflow.org/data/shakespeare.txt')
-# # Read, then decode for py2 compat.
-# text = open(path_to_file, 'rb').read().decode(encoding='utf-8')
-# # length of text is the number of characters in it
-# print ('Length of text: {} characters'.format(len(text)))
-# # Take a look at the first 250 characters in text
-# print(text[:250])
-# # The unique characters in the file
-# vocab = sorted(set(text))
-# print ('{} unique characters'.format(len(vocab)))
-
-
-# # Process the text
-# # Creating a mapping from unique characters to indices
-# char2idx = {u:i for i, u in enumerate(vocab)}
-# idx2char = np.array(vocab)
-
-# text_as_int = np.array([char2idx[c] for c in text])
-# print('{')
-# for char,_ in zip(char2idx, range(20)):
-#     print('  {:4s}: {:3d},'.format(repr(char), char2idx[char]))
-# print('  ...\n}')
-# # Show how the first 13 characters from the text are mapped to integers
-# print ('{} ---- characters mapped to int ---- > {}'.format(repr(text[:13]), text_as_int[:13]))
-
-
-
-def rnn(clustering):
+def rnn(clustering, seq_length, k):
     """
     input: clustering, list of integers, time series of clusters
 
     """
     examples_per_epoch = len(clustering) - 1
-    dataset = preprocess(clustering)
+    dataset = preprocess(clustering, seq_length)
      # Batch size
     BATCH_SIZE = 64
+    # len(clustering)/(seq_length+1)
     # Buffer size to shuffle the dataset
     # (TF data is designed to work with possibly infinite sequences,
     # so it doesn't attempt to shuffle the entire sequence in memory. Instead,
@@ -56,7 +29,7 @@ def rnn(clustering):
 
     # Build the model
     # Length of the vocabulary in chars = k
-    vocab_size = 7
+    vocab_size = k
     # The embedding dimension
     embedding_dim = 256
     # Number of RNN units
@@ -68,18 +41,39 @@ def rnn(clustering):
                 batch_size=BATCH_SIZE)
 
     # Try the model
-    for input_example_batch, target_example_batch in dataset.take(1):
-        example_batch_predictions = model(input_example_batch)
-        print(example_batch_predictions.shape, "# (batch_size, sequence_length, vocab_size)")
-        model.summary()
-        # Train the model
-        train_model(dataset, model, target_example_batch, example_batch_predictions)
-
-
+    # for input_example_batch, target_example_batch in dataset.take(1):
+    #     example_batch_predictions = model(input_example_batch)
+    #     print(example_batch_predictions.shape, "# (batch_size, sequence_length, vocab_size)")
+    #     model.summary()
+    #     # Train the model
+    EPOCHS=10
+    train_model(dataset, model, EPOCHS)
+    
   
-def preprocess(clustering):
+      #ValueError: Tensor's shape (4, 2, 1024) is not compatible with supplied shape [4, 1, 1024]
+def predict(model, clustering):
+    model.reset_states()
+
+    prediction_L = []
+    
+    for i in range(len(clustering)-4):
+        input = clustering[i:i+4]
+        input = tf.expand_dims(input, 0)
+        predictions = model(input)
+        # remove the batch dimension
+        predictions = tf.squeeze(predictions, 0)
+        predicted_id = tf.random.categorical(predictions, num_samples=1)[-1,0].numpy()
+        # temperature = 0.1
+        # using a categorical distribution to predict the character returned by the model
+        # predictions = predictions / temperature
+        # print(predicted_id)
+        prediction_L.append(predicted_id)
+    print(len(prediction_L))
+    
+    return prediction_L
+
+def preprocess(clustering, seq_length):
     # define length of each sequence
-    seq_length = 4
     # Create dataset
     dataset = tf.data.Dataset.from_tensor_slices(clustering)
     # Put clustering in sequences with length of 5
@@ -95,7 +89,6 @@ def preprocess(clustering):
         input_text = chunk[:-1]
         target_text = chunk[1:]
         return input_text, target_text
-
     return sequences.map(split_input_target)
 
     # TODO: testing purpose, delete later
@@ -121,10 +114,7 @@ def build_model(vocab_size, embedding_dim, rnn_units, batch_size):
     ])
     return model
 
-def train_model(dataset, model, target_example_batch, example_batch_predictions):
-    example_batch_loss  = loss(target_example_batch, example_batch_predictions)
-    print("Prediction shape: ", example_batch_predictions.shape, " # (batch_size, sequence_length, vocab_size)")
-    print("scalar_loss:      ", example_batch_loss.numpy().mean())
+def train_model(dataset, model, epochs):
     model.compile(optimizer='adam', loss=loss)
 
     # Directory where the checkpoints will be saved
@@ -137,9 +127,7 @@ def train_model(dataset, model, target_example_batch, example_batch_predictions)
         save_weights_only=True)
     
     # Actual training process
-    EPOCHS=10
-    history = model.fit(dataset, epochs=EPOCHS, callbacks=[checkpoint_callback])
-
+    history = model.fit(dataset, epochs=epochs, callbacks=[checkpoint_callback])
 
 
 # sampled_indices = tf.random.categorical(example_batch_predictions[0], num_samples=1)
@@ -151,25 +139,15 @@ def train_model(dataset, model, target_example_batch, example_batch_predictions)
 
 # Train the model
 def loss(labels, logits):
-  return tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
+    return tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
 
 
+def accuracy(predictions_L, actual_L):
+    # actual_L = clustering[4:]
+    correct = 0
+    for i in range(len(actual_L)):
+        if (predictions_L[i]==actual_L[i]):
+            correct += 1
+    return correct/len(actual_L)
 
 
-"""
-word: abba
-mapping: a->0 (delete)
-        b->1, etc.
-input matrix: [[1,0,0,0]
-               [0,1,0,0]
-               [0,1,0,0]
-               [1,0,0,0]
-              ]
-our case:
-cluster sequence: [0,1,2,1]
-input matrix: [[1,0,0,0]
-               [0,1,0,0]
-               [0,0,1,0]
-               [0,1,0,0]
-              ]
-"""
