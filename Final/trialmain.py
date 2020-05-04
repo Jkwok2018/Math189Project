@@ -172,7 +172,7 @@ def dictionary(Xtrain, Xtest, seq_length):
     # print("Cases not found: ", not_found)
     return accuracy
 
-def preprocess_test_data(clusters):
+def preprocess_test_data(weight, clusters):
     """
     Pre-processing the testing data
     Input: clusters - an array of time-series label of the training data
@@ -193,18 +193,18 @@ def preprocess_test_data(clusters):
     return Xtest
     
 
-def accuracy_vs_length(clusters):
+def accuracy_vs_length(weight, clusters, Xtrain):
+    print("accuracy vs length")
     """
     Plot the sequence legnth vs accuracy plot
     Input: clusters - a list of time-series label of the training data
-
     """
     # Pre-processes the test data and return a list of time-series label
     # of the testing data
-    Xteest = preprocess_test_data(clusters)
+    Xtest = preprocess_test_data(weight, clusters)
 
     # generate a list of different sequence lengths
-    seq_length_L = [i for i in range(4, 25)]
+    seq_length_L = [i for i in range(4, 10)]
     accuracy_L = []
 
     # For each sequence length, determines the accuracy by calling the 
@@ -308,7 +308,7 @@ def main():
     #                  constraints=[constr],
     #                 options={'tol':0.1,'maxfev':2})
     
-    weight = [0.09, 0.1, 0.1, 0.71]
+    
     # bounds = tuple((0.1,1) for x in weight0)
     # # print(weight0)
     # constraint = NonlinearConstraint(sum, 1, 1)
@@ -316,52 +316,29 @@ def main():
     #                 bounds=bounds,constraints=[constraint], options={'maxiter':3})
     # print(ans)
 
-
-    # testing_weight = [[0.1, 0.1, 0.1, 0.7],
-    #                     [0.09, 0.1, 0.1, 0.71],
-    #                     [0.15, 0.1, 0.1, 0.65],
-    #                      [0.1, 0.2, 0.2, 0.5],
-    #                      [0.1, 0.25, 0.2, 0.45],
-    #                      [0.08, 0.25, 0.2, 0.47],
-    #                      [0.1, 0.23, 0.2, 0.47]
-    #                  ]  
-                    #     [[0.3,0.3,0.2,0.2],
-                    #   [0.5, 0.1, 0.1, 0.3],
-                    #   [0.3, 0.2, 0.2, 0.3],
-                    #   [0.2, 0.2, 0.3 , 0.3],
-                    #   [0.1, 0.1, 0.1, 0.7],
-                    #   [0.2, 0.3, 0.3, 0.2],
-                    #   [0.1, 0.3, 0.3, 0.3],
-                    #   [0.1, 0.2, 0.2, 0.5],
-                    #   [0.05, 0.45, 0.45, 0.05],
-                    #   [0.05, 0.50, 0.4, 0.05],
-                    #   [0.1, 0.4, 0.4, 0.1],
-                    #   [0.03, 0.47, 0.47, 0.3],
-                    #   [0.07, 0.5, 0.40, 0.03 ]
-                    #   ]
-    # #                   # highest: [0.2, 0.5, 0.2, 0.1]
-
     # for weight_ in testing_weight:
     #     score = rosen(weight_)
     #     print("weight, score:", weight_, score)
     # normalize the raw data so that they are all in the range of (0,1)
     (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
-    # define the number of clusters 
+    # # define the number of clusters 
     k = 7
 
     # perform clustering
     print("\nClustering normalized data with k=" + str(k))
-    # weight: a list of 4 items that contained the weight of the center, the principal and the secondary eigenvalue, and theta
-    # weight = [0.1, 0.2, 0.1, 0.7]
-
+    # # weight: a list of 4 items that contained the weight of the center, the principal and the secondary eigenvalue, and theta
+    # weight = [0.16, 0.74, 0.05, 0.05]
+    # weight = [0.15, 0.75, 0.05, 0.05]
+    weight = [0.09, 0.1, 0.1, 0.71]
+    
     def distance(item1, item2):
-        return cluster.distance(weight0,item1, item2)
+        return cluster.distance(weight,item1, item2)
 
     clustering = cluster.cluster(weight, norm_data, k)
     
     # print results
     print("\nDone. Clustering:")
-    print(clustering)
+    # print(clustering)
     print("\nRaw data grouped by cluster: ")
     clusters = cluster.display(norm_data, clustering, k)
 
@@ -371,7 +348,6 @@ def main():
     # print(result)
     # print("Secod score")
     # print(result2)
-
     # Uncomment in order to visualize the result by plotting all elicpses on the same plot
     #
     # draw_ellipse(data, clustering)
@@ -379,50 +355,49 @@ def main():
     ### Uncoment if want to visualize the optimal k value, must comment out the block above
     # Find the optimal k value by calculating the average distance associated with each
     #
-    # weight = [0.05, 0.45, 0.45, 0.05]
-    # #weight = [0.10, 0.45, 0.40, 0.05]
     # distance_L = []
-    # for  k in range(3, 9):
+    # for  k in range(1, 8):
     #     print("k = "+ str(k))
-    #     clustering = cluster.cluster(weight,norm_data, k)
+    #     clustering = cluster.cluster(norm_data, k)
     #     clusters = cluster.display(norm_data, clustering, k)
-    #     distance0 = cluster_distance(clusters, weight)
-    #     distance_L.append([k, distance0])
-    #     result = metrics.silhouette_score(raw_data, clustering, 
-    #                 metric = distance, sample_size=500)
-    #     print(result)
+    #     distance = cluster_distance(clusters)
+    #     distance_L.append([k, distance])
     # threshold_plot(distance_L)
 
 
     print("\nEnd k-means demo ")
 
+    # # Prediction
+    # # rnn.rnn(clustering, seq_length, k)
+    # checkpoint_dir = './training_checkpoints'
+    # # Restore the latest checkpoint
+    # tf.train.latest_checkpoint(checkpoint_dir)
+    
+    # accuracy_L = []
+    # for seq_length in range(8,11):
+    #     embedding_dim = 256
+    #     rnn_units = 1024
+    #     model = rnn.build_model(k, embedding_dim, rnn_units, batch_size=1)
+    #     model.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
+    #     model.build(tf.TensorShape([1, None]))
 
-    # Split the eclipses in 9 Xtrain: 1 Xtest for the Markov Model
+    #     predictions_L = rnn.predict(model, clustering)
+    #     actual_L = clustering[4:]
+    #     accuracy = rnn.accuracy(predictions_L, actual_L)
+    #     accuracy_L.append(accuracy)
+    #     print("accuracy of seq_length ", seq_length, " is ", str(accuracy))
+    # print(accuracy_L)
+    
+    # prediction = rnn.predict(model, [0, 0, 1, 1])
+    # print("prediction: ", prediction)
+    # seq_length = 4, accuracy 0.8086890243902439
+    # [0.14, 0.74, 0.15, 0.05]
+
+    # Setting the trained data to Xtrain
     Xtrain = clustering
+    # create the accuracy vs sequence length plot
+    accuracy_vs_length(weight, clusters, Xtrain)
 
-    # Obtain testData
-    dTest  = pd.read_csv("Processed95-00.csv")
-    dataframeTest = dTest.loc[:, ['PriceChange', 'VolumeChange']]
-    Y = np.array(dataframeTest.to_numpy())
-    testData = sum30Day(Y)
-
-    # Get cluster mean
-    meanCluster = cluster_mean(clusters)
-    # Normalize TestData
-    raw_testdata =  np.asarray(testData, dtype=np.float32)
-    (norm_testdata, mins, maxs) = cluster.mm_normalize(raw_testdata)
-    Xtest = assign_clusters(weight, meanCluster,norm_testdata)
-    
-    seq_length_L = [i for i in range(4, 25)]
-    accuracy_L = []
-    for seq_length in seq_length_L:
-        accuracy = dictionary(Xtrain, Xtest, seq_length)
-        accuracy_L.append(accuracy)
-    
-    plt.scatter(seq_length_L, accuracy_L)
-    plt.xlabel('seq_length')
-    plt.ylabel('accuracy')
-    plt.show()
 
 if __name__ == "__main__":
     main()
