@@ -19,8 +19,7 @@ import tensorflow as tf
 
 ###### FUNCTIONS #########
 
-""" Visualizing Data"""
-
+#-----------------------Visualizing Data-------------------------
 def draw_vector(v0, v1, ax=None):
     ''' draws eigen vectors
     '''
@@ -62,8 +61,7 @@ def draw_ellipse(data, cluster):
     plt.show()
 
 
-""" Functions used for determining the value of k """
-
+#-----------------------Determining K-------------------------
 def cluster_distance(clusters):
     """ Sum the average distance in each cluster, and then take the average
     Input: clusters is a array in an array, saving all the eclipses by its cluster
@@ -103,6 +101,7 @@ def cluster_mean(clusters):
     for i in range(len(clusters)):
         c = clusters[i]
         mean = np.mean(c, axis = 0)
+        # print(mean)
         meanList.append(mean)
     return meanList
 
@@ -115,23 +114,23 @@ def assign_clusters(weight, meanList, dataToBeAssigned):
         dataCluster += [np.argmin(distanceList)]
     return dataCluster
 
-""" Training and Testing the Mark Model"""
+#--------------------------------------Markov Chain---------------
 
-def get_cluster_dict(L):
+def get_cluster_dict(L, seq_length):
     """ 
     input: a list of cluster labels in time series
-    output: an dictionary where the keys are chunks of 4 clusters 
+    output: an dictionary where the keys are chunks of seq_length clusters 
     and the values is [the most probable fifth cluster, probability of the most probable]
     """
     items = dict()
-    for i in range(len(L)-5):
-        four_label = ''.join(map(str, L[i:i+4] )) 
-        if four_label not in items:
-            items.update({four_label: [0,0,0,0,0,0,0]})
-        old_value = items.get(four_label)
-        index = L[i + 4]
+    for i in range(len(L)-seq_length):
+        labels = ''.join(map(str, L[i:i+seq_length] )) 
+        if labels not in items:
+            items.update({labels: [0,0,0,0,0,0,0]})
+        old_value = items.get(labels)
+        index = L[i + seq_length]
         old_value[index] += 1
-        items.update({four_label: old_value})
+        items.update({labels: old_value})
             
     for key in items:
         max_cluster = np.argmax(items.get(key))
@@ -140,32 +139,94 @@ def get_cluster_dict(L):
 
     return items
 
-def test_markov(dict, testL):
+def test_markov(dict, testL, seq_length):
     '''
-    input: dictionary generated from running get_cluster_dict, and testL is the test set
+    input: dictionary generated from running get_cluster_dict, testL is the test set, 
+            seq_length is the length of the key
     output: the accuracy of prediction and the number of cases in which the testing set's
     shift window was not found in the training set. 
     '''
     not_found = 0
     failed_cases = 0
-    for i in range(len(testL)-5):
-        four_label = ''.join(map(str, testL[i:i+4] )) 
-        if four_label not in dict:
+    for i in range(len(testL)-seq_length-1):
+        labels = ''.join(map(str, testL[i:i+seq_length])) 
+        if labels not in dict:
             not_found += 1
-        elif (dict[four_label][0] != testL[i+4]):
+        elif (dict[labels][0] != testL[i+seq_length]):
             failed_cases += 1
     correctness = 1-((failed_cases + not_found)* 1.0 /(len(testL)))
     return correctness, not_found
 
-"""Helper Function for Main"""
 
-'''
+def dictionary(Xtrain, Xtest, seq_length):
+    """
+    Returns the accuracy for a specific sequence length 
+    Input: Xtrain, the training data (list)
+           Xtest, the testing data (list)
+           seq_length, the sequence length of the key (integer)
+    """
+    # Training and Testing Markov Model
+    dictionary = get_cluster_dict(Xtrain, seq_length)
+    accuracy, not_found = test_markov(dictionary, Xtest, seq_length)
+    # print("Accuracy is " + str(accuracy*100) + "%")
+    # print("Cases not found: ", not_found)
+    return accuracy
+
+def preprocess_test_data(clusters):
+    """
+    Pre-processing the testing data
+    Input: clusters - an array of time-series label of the training data
+    Note: Called in accuracy_vs_length
+    """
+    # Obtain testData
+    dTest  = pd.read_csv("Processed95-00.csv")
+    dataframeTest = dTest.loc[:, ['PriceChange', 'VolumeChange']]
+    Y = np.array(dataframeTest.to_numpy())
+    testData = sum30Day(Y)
+
+    # Get cluster mean
+    meanCluster = cluster_mean(clusters)
+    # Normalize TestData
+    raw_testdata =  np.asarray(testData, dtype=np.float32)
+    (norm_testdata, mins, maxs) = cluster.mm_normalize(raw_testdata)
+    Xtest = assign_clusters(weight, meanCluster,norm_testdata)
+    return Xtest
+    
+
+def accuracy_vs_length(clusters):
+    """
+    Plot the sequence legnth vs accuracy plot
+    Input: clusters - a list of time-series label of the training data
+
+    """
+    # Pre-processes the test data and return a list of time-series label
+    # of the testing data
+    Xteest = preprocess_test_data(clusters)
+
+    # generate a list of different sequence lengths
+    seq_length_L = [i for i in range(4, 25)]
+    accuracy_L = []
+
+    # For each sequence length, determines the accuracy by calling the 
+    # dictionary function. Then, append the accuracy to a list
+    for seq_length in seq_length_L:
+        accuracy = dictionary(Xtrain, Xtest, seq_length)
+        accuracy_L.append(accuracy)
+    
+    # plot sequence legnth vs accuracy
+    plt.scatter(seq_length_L, accuracy_L)
+    plt.xlabel('seq_length')
+    plt.ylabel('accuracy')
+    plt.show()
+
+
+"""Helper Function for Main"""
+def sum30Day(dataframe):
+    '''
     Summarizing 30 days data in the following format:
         [mean of percent price change, mean of percent volume change change,
         principal eigenvalue, secondary principal eigenvalue, theta]
-'''
-def sum30Day(dataframe):
-
+    '''
     # data is the matrix that holds all the pca 5-elements lists
     # it has a dimension of (n, 5) where n is the number of pcas we have
     data = []
@@ -203,7 +264,7 @@ def sum30Day(dataframe):
         # append returnList to data
         data.append(returnList)
 
-    return data    
+    return data 
 
 ###### MAIN ########
 
@@ -281,16 +342,17 @@ def main():
     # perform clustering
     print("\nClustering normalized data with k=" + str(k))
     # # weight: a list of 4 items that contained the weight of the center, the principal and the secondary eigenvalue, and theta
+    # weight = [0.16, 0.74, 0.05, 0.05]
+    # weight = [0.15, 0.75, 0.05, 0.05]
     weight = [0.2, 0.78, 0.015, 0.005]
-
-    # def distance(item1, item2):
-    #     return cluster.distance(weight,item1, item2)
+    def distance(item1, item2):
+        return cluster.distance(weight,item1, item2)
 
     clustering = cluster.cluster(weight, norm_data, k)
     
     # print results
     print("\nDone. Clustering:")
-    print(clustering)
+    # print(clustering)
     print("\nRaw data grouped by cluster: ")
     clusters = cluster.display(norm_data, clustering, k)
 
@@ -319,60 +381,40 @@ def main():
 
     print("\nEnd k-means demo ")
 
-    # Prediction
-    # rnn.rnn(clustering, seq_length, k)
-    checkpoint_dir = './training_checkpoints'
-    # Restore the latest checkpoint
-    tf.train.latest_checkpoint(checkpoint_dir)
+    # # Prediction
+    # # rnn.rnn(clustering, seq_length, k)
+    # checkpoint_dir = './training_checkpoints'
+    # # Restore the latest checkpoint
+    # tf.train.latest_checkpoint(checkpoint_dir)
     
-    accuracy_L = []
-    for seq_length in range(8,11):
-        embedding_dim = 256
-        rnn_units = 1024
-        model = rnn.build_model(k, embedding_dim, rnn_units, batch_size=1)
-        model.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
-        model.build(tf.TensorShape([1, None]))
+    # accuracy_L = []
+    # for seq_length in range(8,11):
+    #     embedding_dim = 256
+    #     rnn_units = 1024
+    #     model = rnn.build_model(k, embedding_dim, rnn_units, batch_size=1)
+    #     model.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
+    #     model.build(tf.TensorShape([1, None]))
 
-        predictions_L = rnn.predict(model, clustering)
-        actual_L = clustering[4:]
-        accuracy = rnn.accuracy(predictions_L, actual_L)
-        accuracy_L.append(accuracy)
-        print("accuracy of seq_length ", seq_length, " is ", str(accuracy))
-    print(accuracy_L)
+    #     predictions_L = rnn.predict(model, clustering)
+    #     actual_L = clustering[4:]
+    #     accuracy = rnn.accuracy(predictions_L, actual_L)
+    #     accuracy_L.append(accuracy)
+    #     print("accuracy of seq_length ", seq_length, " is ", str(accuracy))
+    # print(accuracy_L)
     
     # prediction = rnn.predict(model, [0, 0, 1, 1])
     # print("prediction: ", prediction)
     # seq_length = 4, accuracy 0.8086890243902439
     # [0.14, 0.74, 0.15, 0.05]
 
-"""
-    # Split the eclipses in 9 Xtrain: 1 Xtest for the Markov Model
+    # Setting the trained data to Xtrain
     Xtrain = clustering
+    # create the accuracy vs sequence length plot
+    accuracy_vs_length(clusters)
 
-    # Obtain testData
-    dTest  = pd.read_csv("Processed95-00.csv")
-    dataframeTest = dTest.loc[:, ['PriceChange', 'VolumeChange']]
-    Y = np.array(dataframeTest.to_numpy())
-    testData = sum30Day(Y)
+   
 
-    # Get cluster mean
-    meanCluster = cluster_mean(clusters)
-    # Normalize TestData
-    raw_testdata =  np.asarray(testData, dtype=np.float32)
-    (norm_testdata, mins, maxs) = cluster.mm_normalize(raw_testdata)
-    testDataClustering = assign_clusters(meanCluster,norm_testdata)
 
-    Xtest = testDataClustering
-    
-    # Training and Testing Markov Model
-    dictionary = get_cluster_dict(Xtrain)
-    correctness, not_found = test_markov(dictionary, Xtest)
-    print("Accuracy is " + str(correctness*100) + "%")
-    print("Cases not found: ", not_found)
-    
-    metrics.silhouette_score(norm_data, clustering)
-
-"""
 if __name__ == "__main__":
     main()
 

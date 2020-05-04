@@ -165,7 +165,7 @@ def display(raw_data, clustering, k):
             c_id = clustering[i]  # cluster ID of curr item
             if c_id == kk:  # curr item belongs to curr cluster so . . 
                 kth_cluster.append(raw_data[i])
-                # print("%4d " % i, end=""); print(raw_data[i])
+        #         print("%4d " % i, end=""); print(raw_data[i])
         # print("-------------------")  
         clusters.append(kth_cluster)
     return clusters

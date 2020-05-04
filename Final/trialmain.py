@@ -9,16 +9,17 @@ import math as math
 import random
 from statistics import mean
 import cluster2 as cluster
+import rnn
 from sklearn import metrics
 from matplotlib.patches import Ellipse
 from scipy.optimize import minimize
 from optimization import opt_helper
 from scipy.optimize import NonlinearConstraint
+import tensorflow as tf
 
 ###### FUNCTIONS #########
 
-""" Visualizing Data"""
-
+#-----------------------Visualizing Data-------------------------
 def draw_vector(v0, v1, ax=None):
     ''' draws eigen vectors
     '''
@@ -60,9 +61,8 @@ def draw_ellipse(data, cluster):
     plt.show()
 
 
-""" Functions used for determining the value of k """
-
-def cluster_distance(clusters,weight):
+#-----------------------Determining K-------------------------
+def cluster_distance(clusters):
     """ Sum the average distance in each cluster, and then take the average
     Input: clusters is a array in an array, saving all the eclipses by its cluster
     [[ellipses in cluster 0]
@@ -78,9 +78,8 @@ def cluster_distance(clusters,weight):
         c = clusters[i]
         mean = np.mean(c, axis=0)
         for j in range(len(c)):
-            total += cluster.distance(weight,c[j], mean)
-        #clusters_avg += total*1.0/len(c)
-        clusters_avg += total*1.0
+            total += cluster.distance(c[j], mean)
+        clusters_avg += total*1.0/len(c)
     return float(clusters_avg/len(clusters))
 
 def threshold_plot(L):
@@ -102,6 +101,7 @@ def cluster_mean(clusters):
     for i in range(len(clusters)):
         c = clusters[i]
         mean = np.mean(c, axis = 0)
+        # print(mean)
         meanList.append(mean)
     return meanList
 
@@ -114,23 +114,23 @@ def assign_clusters(weight, meanList, dataToBeAssigned):
         dataCluster += [np.argmin(distanceList)]
     return dataCluster
 
-""" Training and Testing the Mark Model"""
+#--------------------------------------Markov Chain---------------
 
-def get_cluster_dict(L):
+def get_cluster_dict(L, seq_length):
     """ 
     input: a list of cluster labels in time series
-    output: an dictionary where the keys are chunks of 4 clusters 
+    output: an dictionary where the keys are chunks of seq_length clusters 
     and the values is [the most probable fifth cluster, probability of the most probable]
     """
     items = dict()
-    for i in range(len(L)-5):
-        four_label = ''.join(map(str, L[i:i+4] )) 
-        if four_label not in items:
-            items.update({four_label: [0,0,0,0,0,0,0]})
-        old_value = items.get(four_label)
-        index = L[i + 4]
+    for i in range(len(L)-seq_length):
+        labels = ''.join(map(str, L[i:i+seq_length] )) 
+        if labels not in items:
+            items.update({labels: [0,0,0,0,0,0,0]})
+        old_value = items.get(labels)
+        index = L[i + seq_length]
         old_value[index] += 1
-        items.update({four_label: old_value})
+        items.update({labels: old_value})
             
     for key in items:
         max_cluster = np.argmax(items.get(key))
@@ -139,32 +139,94 @@ def get_cluster_dict(L):
 
     return items
 
-def test_markov(dict, testL):
+def test_markov(dict, testL, seq_length):
     '''
-    input: dictionary generated from running get_cluster_dict, and testL is the test set
+    input: dictionary generated from running get_cluster_dict, testL is the test set, 
+            seq_length is the length of the key
     output: the accuracy of prediction and the number of cases in which the testing set's
     shift window was not found in the training set. 
     '''
     not_found = 0
     failed_cases = 0
-    for i in range(len(testL)-5):
-        four_label = ''.join(map(str, testL[i:i+4] )) 
-        if four_label not in dict:
+    for i in range(len(testL)-seq_length-1):
+        labels = ''.join(map(str, testL[i:i+seq_length])) 
+        if labels not in dict:
             not_found += 1
-        elif (dict[four_label][0] != testL[i+4]):
+        elif (dict[labels][0] != testL[i+seq_length]):
             failed_cases += 1
     correctness = 1-((failed_cases + not_found)* 1.0 /(len(testL)))
     return correctness, not_found
 
-"""Helper Function for Main"""
 
-'''
+def dictionary(Xtrain, Xtest, seq_length):
+    """
+    Returns the accuracy for a specific sequence length 
+    Input: Xtrain, the training data (list)
+           Xtest, the testing data (list)
+           seq_length, the sequence length of the key (integer)
+    """
+    # Training and Testing Markov Model
+    dictionary = get_cluster_dict(Xtrain, seq_length)
+    accuracy, not_found = test_markov(dictionary, Xtest, seq_length)
+    # print("Accuracy is " + str(accuracy*100) + "%")
+    # print("Cases not found: ", not_found)
+    return accuracy
+
+def preprocess_test_data(clusters):
+    """
+    Pre-processing the testing data
+    Input: clusters - an array of time-series label of the training data
+    Note: Called in accuracy_vs_length
+    """
+    # Obtain testData
+    dTest  = pd.read_csv("Processed95-00.csv")
+    dataframeTest = dTest.loc[:, ['PriceChange', 'VolumeChange']]
+    Y = np.array(dataframeTest.to_numpy())
+    testData = sum30Day(Y)
+
+    # Get cluster mean
+    meanCluster = cluster_mean(clusters)
+    # Normalize TestData
+    raw_testdata =  np.asarray(testData, dtype=np.float32)
+    (norm_testdata, mins, maxs) = cluster.mm_normalize(raw_testdata)
+    Xtest = assign_clusters(weight, meanCluster,norm_testdata)
+    return Xtest
+    
+
+def accuracy_vs_length(clusters):
+    """
+    Plot the sequence legnth vs accuracy plot
+    Input: clusters - a list of time-series label of the training data
+
+    """
+    # Pre-processes the test data and return a list of time-series label
+    # of the testing data
+    Xteest = preprocess_test_data(clusters)
+
+    # generate a list of different sequence lengths
+    seq_length_L = [i for i in range(4, 25)]
+    accuracy_L = []
+
+    # For each sequence length, determines the accuracy by calling the 
+    # dictionary function. Then, append the accuracy to a list
+    for seq_length in seq_length_L:
+        accuracy = dictionary(Xtrain, Xtest, seq_length)
+        accuracy_L.append(accuracy)
+    
+    # plot sequence legnth vs accuracy
+    plt.scatter(seq_length_L, accuracy_L)
+    plt.xlabel('seq_length')
+    plt.ylabel('accuracy')
+    plt.show()
+
+
+"""Helper Function for Main"""
+def sum30Day(dataframe):
+    '''
     Summarizing 30 days data in the following format:
         [mean of percent price change, mean of percent volume change change,
         principal eigenvalue, secondary principal eigenvalue, theta]
-'''
-def sum30Day(dataframe):
-
+    '''
     # data is the matrix that holds all the pca 5-elements lists
     # it has a dimension of (n, 5) where n is the number of pcas we have
     data = []
@@ -202,8 +264,8 @@ def sum30Day(dataframe):
         # append returnList to data
         data.append(returnList)
 
-    return data    
-
+    return data 
+    
 ###### MAIN ########
 
 def main():
@@ -222,31 +284,31 @@ def main():
     # convert data to np.array
     raw_data =  np.asarray(data, dtype=np.float32)
 
-    def rosen(weight):
-        return opt_helper(weight, raw_data)
+    # def rosen(weight):
+    #     return opt_helper(weight, raw_data)
 
     # # weight0 = [0.2, 0.78, 0.015, 0.005]
     # weight0 = [0.05, 0.45, 0.45, 0.05]
-    weight0 = [0.08, 0.25, 0.2, 0.47]
+    # weight0 = [0.08, 0.25, 0.2, 0.47]
     # print(weight0)
     
-    constr = {'type':'eq',
-              'fun': lambda x: 1-sum(x)}
-    bounds = tuple(((0,1) for x in weight0))
+    # constr = {'type':'eq',
+    #           'fun': lambda x: 1-sum(x)}
+    # bounds = tuple(((0,1) for x in weight0))
     # bounds = [(0, 0.1), (0.1,1), (0.1,1), (0, 0.1)]
 
     # # # constraint = NonlinearConstraint(sum, 1, 1)
     # # Nelder-Mead, BFGS
     # ans = minimize(rosen, weight0, method='Nelder-Mead', 
     #              options={'maxiter':10})
-    ans = minimize(rosen, weight0, method='SLSQP', 
-                     constraints=[constr],bounds=bounds,
-                    options={'maxiter':10,'ftol':0.001})
+    # ans = minimize(rosen, weight0, method='SLSQP', 
+    #                  constraints=[constr],bounds=bounds,
+    #                 options={'maxiter':10,'ftol':0.001})
     # ans = minimize(rosen, weight0, method='COBYLA', 
     #                  constraints=[constr],
     #                 options={'tol':0.1,'maxfev':2})
     
-    # weight0 = [0.1, 0.1, 0.1, 0.7]
+    weight = [0.09, 0.1, 0.1, 0.71]
     # bounds = tuple((0.1,1) for x in weight0)
     # # print(weight0)
     # constraint = NonlinearConstraint(sum, 1, 1)
@@ -282,26 +344,26 @@ def main():
     # for weight_ in testing_weight:
     #     score = rosen(weight_)
     #     print("weight, score:", weight_, score)
-    #normalize the raw data so that they are all in the range of (0,1)
-    # (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
+    # normalize the raw data so that they are all in the range of (0,1)
+    (norm_data, mins, maxs) = cluster.mm_normalize(raw_data)
     # define the number of clusters 
-    # k = 7
+    k = 7
 
     # perform clustering
-    # print("\nClustering normalized data with k=" + str(k))
+    print("\nClustering normalized data with k=" + str(k))
     # weight: a list of 4 items that contained the weight of the center, the principal and the secondary eigenvalue, and theta
     # weight = [0.1, 0.2, 0.1, 0.7]
 
     def distance(item1, item2):
         return cluster.distance(weight0,item1, item2)
 
-    # clustering = cluster.cluster(weight, norm_data, k)
+    clustering = cluster.cluster(weight, norm_data, k)
     
-    # # print results
-    # print("\nDone. Clustering:")
-    # print(clustering)
-    # print("\nRaw data grouped by cluster: ")
-    # clusters = cluster.display(norm_data, clustering, k)
+    # print results
+    print("\nDone. Clustering:")
+    print(clustering)
+    print("\nRaw data grouped by cluster: ")
+    clusters = cluster.display(norm_data, clustering, k)
 
     # result = metrics.silhouette_score(norm_data, clustering, metric = distance, sample_size=50)
     # result2 = metrics.silhouette_score(raw_data, clustering, metric = distance,sample_size=50)
@@ -334,7 +396,7 @@ def main():
 
     print("\nEnd k-means demo ")
 
-"""
+
     # Split the eclipses in 9 Xtrain: 1 Xtest for the Markov Model
     Xtrain = clustering
 
@@ -349,19 +411,19 @@ def main():
     # Normalize TestData
     raw_testdata =  np.asarray(testData, dtype=np.float32)
     (norm_testdata, mins, maxs) = cluster.mm_normalize(raw_testdata)
-    testDataClustering = assign_clusters(meanCluster,norm_testdata)
-
-    Xtest = testDataClustering
+    Xtest = assign_clusters(weight, meanCluster,norm_testdata)
     
-    # Training and Testing Markov Model
-    dictionary = get_cluster_dict(Xtrain)
-    correctness, not_found = test_markov(dictionary, Xtest)
-    print("Accuracy is " + str(correctness*100) + "%")
-    print("Cases not found: ", not_found)
+    seq_length_L = [i for i in range(4, 25)]
+    accuracy_L = []
+    for seq_length in seq_length_L:
+        accuracy = dictionary(Xtrain, Xtest, seq_length)
+        accuracy_L.append(accuracy)
     
-    metrics.silhouette_score(norm_data, clustering)
+    plt.scatter(seq_length_L, accuracy_L)
+    plt.xlabel('seq_length')
+    plt.ylabel('accuracy')
+    plt.show()
 
-"""
 if __name__ == "__main__":
     main()
 
