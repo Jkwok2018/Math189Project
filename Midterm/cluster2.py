@@ -26,21 +26,19 @@ def mm_normalize(data):
             result[i,j] = (data[i,j] - mins[j]) / (maxs[j] - mins[j])
     return (result, mins, maxs)
 
-def distance(weight, item, mean):
+def distance(item, mean):
     '''
     item: a list of 5 items: coordinates of center, the principal and
     secondary eigenvalue and theta
     mean: a vector containing these 5 components to all of our data
-    weight: a list of 4 items that contained the weight of the center, 
-    the principal and the secondary eigenvalue, and theta
     '''
     # Weight for center
-    CenterW = weight[0] 
+    CenterW = 0.2  
     # Weight for Prinipal Eigenvalue     
-    PrincipalW = weight[1]   
+    PrincipalW = 0.78   
     # Weight for the smaller Eigenvalue 
-    MinorW = weight[2]
-    AngleW = weight[3]
+    MinorW = 0.015
+    AngleW = 0.005    
         
     # Putting the coordinates of center into an list
     center1 = item[0:2]
@@ -57,14 +55,12 @@ def distance(weight, item, mean):
     evalue_dis = abs(evalue2[0]-evalue1[0])
     evalue_dis2 = abs(evalue2[1]-evalue1[1])
     theta_dis = abs(theta2-theta1)
-    return CenterW * center_dis**2 + PrincipalW * evalue_dis**2 + MinorW * evalue_dis2**2 + AngleW * theta_dis**2
+    return CenterW * center_dis + PrincipalW * evalue_dis + MinorW * evalue_dis2 + AngleW * theta_dis
 
-def update_clustering(weight, norm_data, clustering, means):
+def update_clustering(norm_data, clustering, means):
     '''
     given a new set of means, assign new clustering
     return False if no change or bad clustering
-    weight: a list of 4 items that contained the weight of the center, 
-    the principal and the secondary eigenvalue, and theta
     '''
     n = len(norm_data)
     k = len(means)
@@ -74,7 +70,7 @@ def update_clustering(weight, norm_data, clustering, means):
 
     for i in range(n):  # go thru each data item
         for kk in range(k):
-            distances[kk] = distance(weight, norm_data[i], means[kk])  
+            distances[kk] = distance(norm_data[i], means[kk])  
         new_id = np.argmin(distances)
         new_clustering[i] = new_id
     
@@ -132,7 +128,8 @@ def initialize(norm_data, k):
     update_means(norm_data, clustering, means)
     return(clustering, means) 
 
-def cluster(weight, norm_data, k):
+@Memoize
+def cluster(norm_data, k):
     '''
     Perform k-means clustering by calling update_clustering and
     update_means
@@ -143,7 +140,7 @@ def cluster(weight, norm_data, k):
     max_iter = 100
     sanity_ct = 1
     while sanity_ct <= max_iter:
-        ok = update_clustering(weight, norm_data, clustering, means)  # use new means
+        ok = update_clustering(norm_data, clustering, means)  # use new means
         if ok == False:
             break  # done
         update_means(norm_data, clustering, means)  # use new clustering
@@ -165,8 +162,8 @@ def display(raw_data, clustering, k):
             c_id = clustering[i]  # cluster ID of curr item
             if c_id == kk:  # curr item belongs to curr cluster so . . 
                 kth_cluster.append(raw_data[i])
-        #         print("%4d " % i, end=""); print(raw_data[i])
-        # print("-------------------")  
+                print("%4d " % i, end=""); print(raw_data[i])
+        print("-------------------")  
         clusters.append(kth_cluster)
     return clusters
 
