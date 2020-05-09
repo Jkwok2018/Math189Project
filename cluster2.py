@@ -60,12 +60,12 @@ def distance(weight, item, mean):
     return CenterW * center_dis**2 + PrincipalW * evalue_dis**2 + MinorW * evalue_dis2**2 + AngleW * theta_dis**2
 
 def update_clustering(weight, norm_data, clustering, means):
-    '''
+    """
     given a new set of means, assign new clustering
     return False if no change or bad clustering
     weight: a list of 4 items that contained the weight of the center, 
     the principal and the secondary eigenvalue, and theta
-    '''
+    """
     n = len(norm_data)
     k = len(means)
 
@@ -97,11 +97,11 @@ def update_clustering(weight, norm_data, clustering, means):
     return True
 
 def update_means(norm_data, clustering, means):
-    '''
+    """
     given a new clustering, compute new means
     assumes update_clustering has just been called
     to guarantee no 0-count clusters
-    '''
+    """
     (n, dim) = norm_data.shape
     k = len(means)
     counts = np.zeros(shape=(k), dtype=np.int)
@@ -133,10 +133,10 @@ def initialize(norm_data, k):
     return(clustering, means) 
 
 def cluster(weight, norm_data, k):
-    '''
+    """
     Perform k-means clustering by calling update_clustering and
     update_means
-    '''
+    """
     (clustering, means) = initialize(norm_data, k)
 
     ok = True  # if a change was made and no bad clustering
@@ -165,8 +165,8 @@ def display(raw_data, clustering, k):
             c_id = clustering[i]  # cluster ID of curr item
             if c_id == kk:  # curr item belongs to curr cluster so . . 
                 kth_cluster.append(raw_data[i])
-        #         print("%4d " % i, end=""); print(raw_data[i])
-        # print("-------------------")  
+                print("%4d " % i, end=""); print(raw_data[i])
+        print("-------------------")  
         clusters.append(kth_cluster)
     return clusters
 
