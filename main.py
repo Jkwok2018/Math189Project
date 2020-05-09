@@ -13,7 +13,6 @@ import rnn
 from sklearn import metrics
 from matplotlib.patches import Ellipse
 from scipy.optimize import minimize
-# from optimization import opt_helper
 import optimization as opt
 from scipy.optimize import NonlinearConstraint
 import tensorflow as tf
@@ -312,7 +311,7 @@ def main():
     # def distance(item1, item2):
     #     return cluster.distance(weight,item1, item2)
     # # use the scipy minimization to find optimal parameters
-    # opt.minimize(rosen, weight)
+    # opt.minimizeHelper(rosen, weight)
     
     #-------------K-mean cluster once-----------
     # Perform K-mean cluster once for the designated weight, in order
