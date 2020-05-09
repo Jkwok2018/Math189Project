@@ -8,23 +8,12 @@ def rnn(clustering, seq_length, k):
     """
     Perform RNN on clustering 
     """
-    examples_per_epoch = len(clustering) - 1
     dataset = preprocess(clustering, seq_length)
      # Batch size
     BATCH_SIZE = 64
-    # len(clustering)/(seq_length+1)
-    # Buffer size to shuffle the dataset
-    # (TF data is designed to work with possibly infinite sequences,
-    # so it doesn't attempt to shuffle the entire sequence in memory. Instead,
-    # it maintains a buffer in which it shuffles elements).
     BUFFER_SIZE = 10000
 
     dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE, drop_remainder=True)
-    # dataset                                               
-    # print dataset
-    for input_example, target_example in  dataset.take(1):
-        print ('Input data: ', input_example)
-        print ('Target data:', target_example)
 
     # Build the model
     # Length of the vocabulary in chars = k
@@ -57,10 +46,6 @@ def predict(model, clustering, seq_length):
         # remove the batch dimension
         predictions = tf.squeeze(predictions, 0)
         predicted_id = tf.random.categorical(predictions, num_samples=1)[-1,0].numpy()
-        # temperature = 0.1
-        # using a categorical distribution to predict the character returned by the model
-        # predictions = predictions / temperature
-        # print(predicted_id)
         prediction_L.append(predicted_id)
     print(len(prediction_L))
     
